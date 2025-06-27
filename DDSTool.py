@@ -1,0 +1,166 @@
+import os
+import shutil
+import subprocess
+from jmbStruct import stFontParam
+from wand.image import Image
+from wand.display import display
+
+def extract(output_dir : str, dds_bytes : bytes, char_infos : list[stFontParam], scale_factor=4, should_store = False):
+    """
+    从DDS贴图中提取字符图像
+    :param dds_bytes: DDS的二进制bytes
+    :param char_infos: 字符位置信息列表
+    :param scale_factor: 坐标缩放因子（逻辑坐标到物理坐标）
+    :return: 提取的字符图像列表(PIL.Image)
+    """
+    # 读取DDS图像 (自动解压为numpy数组)
+    char_image_cnt = 0
+    with Image(blob=dds_bytes) as img:
+        width, height = img.size
+        print(f"DDS图像尺寸: {width}x{height}")
+
+        for idx, char in enumerate(char_infos):
+            u_phys = char.u * scale_factor
+            v_phys = char.v * scale_factor
+            w_phys = char.w * scale_factor
+            h_phys = char.h * scale_factor
+            if (u_phys + w_phys > width or
+                v_phys + h_phys > height):
+                print(f"警告: 字符{idx}超出图像边界")
+                continue
+            char_img = img.clone()
+            char_img.crop(u_phys, v_phys, width=w_phys, height=h_phys)
+            char_image_cnt += 1
+            if should_store:
+                char_img.compression = "no"
+                char_img.save(filename=f'{output_dir}/char_{idx:02d}.png')  # 保存为PNG文件
+
+    print(f"成功提取 {char_image_cnt} 个字符图像")
+
+def reconstruction(input_dir : str, output_path : str, char_infos : list[stFontParam], max_width=1996):
+    """
+    从分割的字符图片重新构建DDS贴图
+
+    :param input_dir: 字符图片目录
+    :param output_path: 输出DDS路径
+    :param char_infos: 字符位置信息列表
+    :param max_width: 最大宽度 (物理像素)
+    """
+    from wand.image import Image
+    from wand.color import Color
+
+    # 1. 加载所有字符图片
+    char_images = []
+    for i in range(len(char_infos)):
+        img_path = os.path.join(input_dir, f"char_{i:02d}.png")
+        if not os.path.exists(img_path):
+            print(f"警告: 字符图片 {img_path} 不存在")
+            continue
+        try:
+            img = Image(filename=img_path)
+            char_images.append(img)
+        except Exception as e:
+            print(f"加载图片 {img_path} 失败: {e}")
+
+    if not char_images:
+        print("错误: 没有找到任何字符图片")
+        return
+
+    # 2. 计算总高度和宽度
+    char_height = char_images[0].height  # 所有字符高度相同
+    print(f"字符高度: {char_height} 像素")
+
+    # 3. 创建空白画布 (初始高度为一行)
+    canvas_width = max_width
+    canvas_height = char_height * 10  # 初始高度足够大，最后再裁剪
+
+    # 创建透明背景的RGBA画布
+    # canvas = Image.new("RGBA", (canvas_width, canvas_height), (0, 0, 0, 0))
+    canvas = Image(width=canvas_width, height=canvas_height, background=Color('transparent'))
+
+    # 4. 布局字符 (智能换行)
+    current_x = 0
+    current_y = 0
+    row_count = 0
+
+    # 存储每个字符的位置信息 (用于调试)
+    positions = []
+
+    for i, (char_img, char_info) in enumerate(zip(char_images, char_infos)):
+        # 获取物理宽度 (缩放后的)
+        info_u = char_info.u * 4
+        info_v = char_info.v * 4
+        info_width = char_info.w * 4
+        info_height = char_info.h * 4
+        char_width = char_img.width
+        char_height = char_img.height
+        assert(info_width == char_width)
+        assert(info_height == char_height)
+
+        # 检查是否需要换行
+        if current_x + char_width > max_width:
+            row_count += 1
+            current_x = 0
+            current_y += char_height
+
+        # print(f"char[{i}] : w={char_width}, h={char_height}; u before={current_x}({info_u}), u after={current_x+char_width}; v={current_y}({info_v}); row={row_count}")
+        current_x = info_u # 我不知道为什么，似乎两个字符之间还可以重合
+        assert(info_u  == current_x)
+        assert(info_v  == current_y)
+
+        if current_x + char_width > max_width:
+            max_width = current_x + char_width
+
+        # 粘贴字符到画布
+        canvas.composite(char_img, left=current_x, top=current_y)
+        # canvas.paste(char_img, (current_x, current_y))
+
+        # 记录位置信息
+        positions.append({
+            "index": i,
+            "u": current_x,
+            "v": current_y,
+            "w": char_width,
+            "h": char_height
+        })
+
+        # 更新X位置
+        current_x += char_width
+
+    # 5. 计算实际使用的画布高度
+    actual_height = current_y + char_height
+    actual_width = max_width
+    print(f"canvas = {actual_width} x {actual_height}")
+
+    # 裁剪画布到实际高度
+    canvas.crop(0, 0, width=actual_width, height=actual_height)
+
+    # 6. 保存为DDS (使用Wand和BC7压缩)
+    try:
+        # 将canvas保存为内存中的PNG字节流
+        canvas.format='png'
+        canvas.save(filename="temp.png")
+        canvas.close()
+
+        # 使用Wand保存为DDS，BC7压缩
+        command = [
+            "texconv.exe",
+            "-f", "BC7_UNORM_SRGB",  # 输出格式
+            "-ft", "dds",            # 输出文件类型
+            "-srgb",                 # 输入为 sRGB，输出也为 sRGB
+            "-m", "1",               # 禁用 mipmap
+            "-y",                    # 覆盖输出文件（不提示）
+            "temp.png",              # 输入文件
+        ]
+        subprocess.run(command, check=True)
+        shutil.move("temp.dds", output_path)
+        os.remove("temp.png")
+
+        print(f"\n成功重建DDS贴图: {output_path}")
+        print(f"行数: {row_count + 1}")
+        print(f"压缩格式: BC7 (BC7)")
+
+        return positions
+    except Exception as e:
+        print(f"保存DDS失败: {e}")
+        return None
