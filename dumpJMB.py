@@ -1,4 +1,6 @@
+from pathlib import Path
 import DDSTool
+import fontTool
 from jmbStruct import MetaData, stOneSentence, stFontParam, stTex
 from jmbDefine import gDat
 from copy import copy, deepcopy
@@ -66,6 +68,9 @@ def temp_modify(jmb : gDat):
     # print(modified_bytes)
 
     # jmb.sentences[0].jimaku_list[0].char_data = modified
+    used_chars = "そこが巣だこのアパートが？連中の群れだ調べでは、14匹が棲みついている全部、殺っていいのか？1匹は、生け捕りにしてくれココの親玉が居るはずだ情報は？会えばわかるさ“笑う顔”とは決定的に違う了解した神に笑いを…悪魔に慈悲を…"
+    ctl_lookup, unique_chars = fontTool.register(used_chars)
+
     for i in range(jmb.meta.sentence_num):
         sent = jmb.sentences[i]
         print("+sent", i)
@@ -75,7 +80,9 @@ def temp_modify(jmb : gDat):
                 break
             print("\t char_data:", len(jmk.char_data), jmk.char_data)
             print("\t rubi_data:", len(jmk.rubi_data), jmk.rubi_data)
-            jmk.dump(f"jmks/sent{i}/{jmk_idx:02d}")
+            target_path = f"jmks/sent{i}/{jmk_idx:02d}"
+            jmk.dump(target_path)
+            fontTool.save_preview_jimaku(target_path+".png", jmk, jmb.fParams, ctl_lookup)
 
     # jmb.sentences[0].jimaku_list[0].rubi_data[0].clear()
     # jmb.sentences[0].jimaku_list[0].dump("dummy.jmk")

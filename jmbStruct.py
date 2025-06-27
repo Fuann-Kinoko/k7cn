@@ -271,6 +271,7 @@ class stJimaku:
 
             # 解析char_data
             char_line = lines[2].strip()
+            assert(len(char_line) < JIMAKU_CHAR_MAX)
             jimaku.char_data = [int(c) for c in char_line.split()]
             jimaku.char_data.append(-2)
             while len(jimaku.char_data) < JIMAKU_CHAR_MAX:
