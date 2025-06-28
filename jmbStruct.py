@@ -1,18 +1,11 @@
 from jmbDefine import gDat
+import jmbConst
 from dataclasses import dataclass
 
 import struct
 import os
 
 # 常量定义（与原始代码一致）
-FILE_LENGTH = 32
-JIMAKU_CHAR_MAX = 32
-JIMAKU_RUBI_MAX = 10
-JIMAKU_RUBI_DAT_MAX = 16
-JIMAKU_LINE_MAX = 16
-
-TEX_HEADER_SIZE = 72
-
 def read_c_string(b):
     # 找到第一个 \x00 的位置，截断后面的内容
     null_pos = b.find(b'\x00')
@@ -104,8 +97,8 @@ class stInfo:
     def read(self, fp):
         before = fp.tell()
         self.wait = struct.unpack('<i', fp.read(4))[0]         # s32
-        self.hps_file = read_c_string(fp.read(FILE_LENGTH))
-        self.mth_file = read_c_string(fp.read(FILE_LENGTH))
+        self.hps_file = read_c_string(fp.read(jmbConst.FILE_LENGTH))
+        self.mth_file = read_c_string(fp.read(jmbConst.FILE_LENGTH))
         self.back_locate = struct.unpack('<h', fp.read(2))[0]  # s16
         self.countinue = struct.unpack('<h', fp.read(2))[0]    # s16
         self.key = struct.unpack('<h', fp.read(2))[0]          # s16
@@ -116,8 +109,8 @@ class stInfo:
     def write(self, fp):
         before = fp.tell()
         fp.write(struct.pack('<i', self.wait))             # s32
-        fp.write(write_c_string(self.hps_file, FILE_LENGTH))
-        fp.write(write_c_string(self.mth_file, FILE_LENGTH))
+        fp.write(write_c_string(self.hps_file, jmbConst.FILE_LENGTH))
+        fp.write(write_c_string(self.mth_file, jmbConst.FILE_LENGTH))
         fp.write(struct.pack('<h', self.back_locate))      # s16
         fp.write(struct.pack('<h', self.countinue))        # s16
         fp.write(struct.pack('<h', self.key))              # s16
@@ -145,7 +138,7 @@ class stRubiDat:
         self.STRUCT_SIZE = 22
         self.from_num : int = -1                # s8
         self.to_num : int = -1                  # s8
-        self.char_id : list[int] = []           # s16[JIMAKU_RUBI_MAX]
+        self.char_id : list[int] = []           # s16[jmbConst.JIMAKU_RUBI_MAX]
         if fp is not None:
             self.read(fp)
 
@@ -154,8 +147,8 @@ class stRubiDat:
         self.from_num = struct.unpack('<b', fp.read(1))[0]       # s8
         self.to_num = struct.unpack('<b', fp.read(1))[0]         # s8
         self.char_id = list(struct.unpack(
-            f'<{JIMAKU_RUBI_MAX}h',
-            fp.read(2 * JIMAKU_RUBI_MAX)
+            f'<{jmbConst.JIMAKU_RUBI_MAX}h',
+            fp.read(2 * jmbConst.JIMAKU_RUBI_MAX)
         ))
         after = fp.tell()
         assert(after - before == self.STRUCT_SIZE)
@@ -165,7 +158,7 @@ class stRubiDat:
         fp.write(struct.pack('<b', self.from_num))   # s8
         fp.write(struct.pack('<b', self.to_num))     # s8
         fp.write(struct.pack(
-            f'<{JIMAKU_RUBI_MAX}h',
+            f'<{jmbConst.JIMAKU_RUBI_MAX}h',
             *self.char_id
         ))
         after = fp.tell()
@@ -177,7 +170,7 @@ class stRubiDat:
     def clear(self):
         self.from_num = -1
         self.to_num = -1
-        self.char_id = [-1] * JIMAKU_RUBI_MAX
+        self.char_id = [-1] * jmbConst.JIMAKU_RUBI_MAX
 
     @classmethod
     def load(cls, fp):
@@ -196,8 +189,8 @@ class stJimaku:
         self.STRUCT_SIZE = 424
         self.wait = 0             # s32
         self.disp_time = 0        # s32
-        self.char_data : list[int]  = []            # s16[JIMAKU_CHAR_MAX] (2 * 32 = 64)
-        self.rubi_data : list[stRubiDat] = []       # stRubiDat[JIMAKU_RUBI_DAT_MAX] (22 * 16 = 352)
+        self.char_data : list[int]  = []            # s16[jmbConst.JIMAKU_CHAR_MAX] (2 * 32 = 64)
+        self.rubi_data : list[stRubiDat] = []       # stRubiDat[jmbConst.JIMAKU_RUBI_DAT_MAX] (22 * 16 = 352)
         if fp is not None:
             self.read(fp)
 
@@ -213,11 +206,19 @@ class stJimaku:
             return 0
 
     def overwrite_ctl(self, new_ctls: list[int]):
-        assert(len(new_ctls) < JIMAKU_CHAR_MAX)
-        self.char_data = new_ctls
-        self.char_data.append(-2)
-        while len(self.char_data) < JIMAKU_CHAR_MAX:
-            self.char_data.append(-1)
+        assert(len(new_ctls) > 0)
+        needs_padding : bool = not (-2 in new_ctls)
+        if needs_padding:
+            assert(len(new_ctls) < jmbConst.JIMAKU_CHAR_MAX)
+            self.char_data = new_ctls
+            self.char_data.append(-2)
+            while len(self.char_data) < jmbConst.JIMAKU_CHAR_MAX:
+                self.char_data.append(-1)
+        else:
+            assert(len(new_ctls) == jmbConst.JIMAKU_CHAR_MAX)
+            self.char_data = new_ctls
+        for i in range(jmbConst.JIMAKU_RUBI_DAT_MAX):
+            self.rubi_data[i].clear()
 
     def read(self, fp):
         before = fp.tell()
@@ -225,12 +226,12 @@ class stJimaku:
         self.disp_time = struct.unpack('<i', fp.read(4))[0]     # s32
         # 读取字符数据
         self.char_data = list(struct.unpack(
-            f'<{JIMAKU_CHAR_MAX}h',
-            fp.read(2 * JIMAKU_CHAR_MAX)
+            f'<{jmbConst.JIMAKU_CHAR_MAX}h',
+            fp.read(2 * jmbConst.JIMAKU_CHAR_MAX)
         ))
         # 读取注音数据
         self.rubi_data = []
-        for _ in range(JIMAKU_RUBI_DAT_MAX):
+        for _ in range(jmbConst.JIMAKU_RUBI_DAT_MAX):
             self.rubi_data.append(stRubiDat(fp))
         after = fp.tell()
         assert(after - before == self.STRUCT_SIZE)
@@ -242,7 +243,7 @@ class stJimaku:
 
         # 序列化字符数据
         fp.write(struct.pack(
-            f'<{JIMAKU_CHAR_MAX}h',
+            f'<{jmbConst.JIMAKU_CHAR_MAX}h',
             *self.char_data
         ))
 
@@ -287,11 +288,12 @@ class stJimaku:
             # 解析char_data
             char_line = lines[2].strip()
             char_ctls = [int(c) for c in char_line.split()]
+            assert(len(char_ctls) == jmbConst.JIMAKU_CHAR_MAX)
             jimaku.overwrite_ctl(char_ctls)
 
             # 填充空rubi
             rubis = []
-            for _ in range(JIMAKU_RUBI_DAT_MAX):
+            for _ in range(jmbConst.JIMAKU_RUBI_DAT_MAX):
                 rubi = stRubiDat()
                 rubi.clear()
                 rubis.append(rubi)
@@ -306,7 +308,7 @@ class stOneSentence:
     def __init__(self, fp = None):
         self.STRUCT_SIZE = 6860
         self.info : stInfo = stInfo()               # stInfo对象 (76)
-        self.jimaku_list : list[stJimaku] = []      # stJimaku对象列表（JIMAKU_LINE_MAX个） (16 * 424)
+        self.jimaku_list : list[stJimaku] = []      # stJimaku对象列表（jmbConst.JIMAKU_LINE_MAX个） (16 * 424)
         if fp is not None:
             self.read(fp)
 
@@ -325,10 +327,10 @@ class stOneSentence:
 
         # 读取stJimaku列表
         self.jimaku_list = []
-        for _ in range(JIMAKU_LINE_MAX):
+        for _ in range(jmbConst.JIMAKU_LINE_MAX):
             jimaku = stJimaku(fp)
             self.jimaku_list.append(jimaku)
-        assert(len(self.jimaku_list) == JIMAKU_LINE_MAX)
+        assert(len(self.jimaku_list) == jmbConst.JIMAKU_LINE_MAX)
         after = fp.tell()
         assert(after - before == self.STRUCT_SIZE)
 
@@ -397,7 +399,7 @@ class stTex:
             self.read(fp)
 
     def read(self, fp):
-        self.header = fp.read(TEX_HEADER_SIZE)
+        self.header = fp.read(jmbConst.TEX_HEADER_SIZE)
         self.dds = fp.read()
         assert(self.dds[:4] == b'DDS ')
 

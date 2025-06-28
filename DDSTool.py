@@ -113,6 +113,7 @@ def reconstruction(input_dir : str, output_path : str, char_infos : list[stFontP
     # 5. 计算实际使用的画布高度
     actual_height = current_y + char_height
     actual_width = current_max_width
+    # actual_width = max_width
     print(f"canvas = {actual_width} x {actual_height}")
 
     # 裁剪画布到实际高度
@@ -152,7 +153,6 @@ def gen(output_path: str, unique_chars: str, max_width=2000):
 
     canvas = Image(width=canvas_width, height=canvas_height, background=Color('transparent'))
 
-    # 4. 布局字符 (智能换行)
     current_x = 0
     current_y = 0
     row_count = 0
@@ -181,6 +181,7 @@ def gen(output_path: str, unique_chars: str, max_width=2000):
 
     actual_height = current_y + HEIGHT * 4
     actual_width = current_max_width
+    # actual_width = max_width
     print(f"canvas = {actual_width} x {actual_height}")
 
     canvas.crop(0, 0, width=actual_width, height=actual_height)

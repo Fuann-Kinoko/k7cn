@@ -170,7 +170,7 @@ def save_preview_jimaku(save_path: str, jimaku: stJimaku, ctl2char_lookup: dict[
             step += 1
         current_x += step*4
 
-    canvas.crop(0, 0, width=current_x, height=57*4)
+    canvas.crop(0, 0, width=current_x + 16, height=57*4)
     canvas.format='png'
     canvas.save(filename=save_path)
     canvas.close()

@@ -1,6 +1,7 @@
 from copy import copy
 import io
 from jmbStruct import *
+import jmbConst
 
 class gDat:
     def __init__(self):
@@ -8,6 +9,7 @@ class gDat:
         self.sentences : list[stOneSentence]
         self.fParams : list[stFontParam]
         self.tex : stTex
+
         self.end_by_tex : bool
 
     def ready_to_write(self) -> bool:
@@ -112,6 +114,11 @@ class gDat:
         assert(fp.tell() == self.meta.tex_offset)
 
         self.tex.write(fp)
+        after_tex = fp.tell()
+        if after_tex != self.meta.s_motion_offset:
+            padding_size = 32 - (after_tex % 32)
+            fp.write(b'\x00' * padding_size)
+        assert(fp.tell() == self.meta.s_motion_offset)
 
     @staticmethod
     def display_char_data(lst: list[int]) -> list[int]:
@@ -153,16 +160,22 @@ class gDat:
             assert(self.sentences[i].valid_jmk_num() == len(local_sent))
             for j, local_jmk in enumerate(local_sent):
                 local_ctls = [char2ctl_lookup[ch] for ch in local_jmk]
+                assert(len(local_ctls) < jmbConst.JIMAKU_CHAR_MAX)
+                local_ctls.append(-2)
+                while len(local_ctls) < jmbConst.JIMAKU_CHAR_MAX:
+                    local_ctls.append(-1)
+                assert(len(local_ctls) == len(self.sentences[i].jimaku_list[j].char_data))
+
                 if validation_mode:
                     assert(self.sentences[i].jimaku_list[j].valid_len() == len(local_jmk))
-                    for k, ctl in enumerate(local_ctls):
-                        assert(self.sentences[i].jimaku_list[j].char_data[k] == ctl)
+                    for k, ctl in enumerate(self.sentences[i].jimaku_list[j].char_data):
+                        assert(ctl == local_ctls[k])
                     print("jmk correct", local_jmk)
                 else:
                     # old = copy(self.sentences[i].jimaku_list[j].char_data)
                     self.sentences[i].jimaku_list[j].overwrite_ctl(local_ctls)
                     # new = copy(self.sentences[i].jimaku_list[j].char_data)
-                    # for k, ctl in enumerate(new):
-                    #     assert(old[k] == ctl)
+                    # for k, old_ctl in enumerate(old):
+                    #     assert(old_ctl == new[k])
                 # print("ori_ctl", self.display_char_data(self.sentences[i].jimaku_list[j].char_data))
                 # print("translation_ctl:", local_ctls)
