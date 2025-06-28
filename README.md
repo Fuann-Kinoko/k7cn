@@ -8,6 +8,7 @@ TODO: Documentation
 # Requirements
 
 - Font : ヒラギノ明朝体 W4 - W8
+- [Wand(Python Binding for ImageMagick)](https://pypi.org/project/Wand/)
 - idk, just read the code
 
 # Usage
