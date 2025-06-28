@@ -93,6 +93,10 @@ def check_kind(char: str) -> FontKind:
     else:
         return FontKind.KANJI
 
+def to_signed_16bit(n: int) -> int:
+    n = n & 0xFFFF
+    return n if n < 0x8000 else n - 0x10000
+
 def register(input: str) -> tuple[dict[int, str], dict[str, int], str]:
     counter = 0
     unique_jmk = ""
@@ -103,15 +107,18 @@ def register(input: str) -> tuple[dict[int, str], dict[str, int], str]:
 
     for char in input:
         if char == "、" or char == "。" or char == " ":
+            char2ctl_dict[char] = -3
             continue
         if char not in char2ctl_dict:
             unique_jmk += char
             if char == "殺":
-                ctl2char_dict[counter | SATSU_FLAG] = char
-                char2ctl_dict[char] = counter | SATSU_FLAG
+                signed = to_signed_16bit(counter | SATSU_FLAG)
+                ctl2char_dict[signed] = char
+                char2ctl_dict[char] = signed
             elif char == "死":
-                ctl2char_dict[counter | SHI_FLAG] = char
-                char2ctl_dict[char] = counter | SHI_FLAG
+                signed = to_signed_16bit(counter | SHI_FLAG)
+                ctl2char_dict[signed] = char
+                char2ctl_dict[char] = signed
             else:
                 ctl2char_dict[counter] = char
                 char2ctl_dict[char] = counter
@@ -137,20 +144,22 @@ def gen_char_image(char: str, info: stFontParam = None) -> Image:
     img.caption(text=char)
     return img
 
-def save_preview_jimaku(save_path: str, jimaku: stJimaku, char_ctl_lookup: dict[int, str], fParams: list[stFontParam] = None):
+def save_preview_jimaku(save_path: str, jimaku: stJimaku, ctl2char_lookup: dict[int, str], fParams: list[stFontParam] = None):
     char_data = gDat.display_char_data(jimaku.char_data)
     canvas = Image(width=35*4*len(char_data), height=57*4, background=Color('black'))
     current_x = 0
     for i, ctl in enumerate(char_data):
-        if (ctl != -3) and ((ctl & SHI_FLAG) or (ctl & SATSU_FLAG)):
-            ctl &= 0x0fff
-        char = char_ctl_lookup[ctl]
+        char = ctl2char_lookup[ctl]
         kind = check_kind(char)
         if (fParams is not None) and (char != " "):
-            char_info = fParams[ctl]
+            if (ctl != -3) and ((ctl & SHI_FLAG) or (ctl & SATSU_FLAG)):
+                index = ctl & 0x0fff
+            else:
+                index = ctl
+            char_info = fParams[index]
         else:
             char_info = stFontParam(u=0,v=0,w=kind.get_width(),h=kind.get_height())
-        print(f"ctl = {ctl}; char = {char}; Kind = {kind};\tparams = {char_info}")
+        # print(f"ctl = {ctl}; char = {char}; Kind = {kind};\tparams = {char_info}")
         char_img = gen_char_image(char, char_info)
         canvas.composite(char_img, left=current_x, top=0, operator='atop')
         char_img.close()
@@ -185,7 +194,7 @@ def genFParams(unique_chars : str, max_width = 500) -> list[stFontParam]:
         if kind in (FontKind.KANJI , FontKind.KATA , FontKind.NUM , FontKind.SPECIAL):
             step += 1
 
-        if u + step > max_width:
+        if u + step >= max_width:
             row_count += 1
             u = 0
             v += HEIGHT

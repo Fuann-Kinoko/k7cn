@@ -1,3 +1,4 @@
+from copy import copy
 import io
 from jmbStruct import *
 
@@ -27,12 +28,13 @@ class gDat:
         assert(self.ready_to_write())
         dummy_fp = io.BytesIO()
 
-        # NOTE: sentence_offset 大小不应该改变
+        # NOTE: sentence_offset 应该不会改变
         self.meta.write(dummy_fp)
         after_meta = dummy_fp.tell()
-        assert( after_meta == self.meta.sentence_offset)
+        assert(after_meta == self.meta.sentence_offset)
 
-        # NOTE: DISABLED: 对char_offset的修改
+        # NOTE: 只要句子个数不变，对char_offset应该不存在修改
+        assert(len(self.sentences) == self.meta.sentence_num)
         for sent in self.sentences:
             sent.write(dummy_fp)
         after_sent = dummy_fp.tell()
@@ -40,7 +42,13 @@ class gDat:
             self.meta.char_offset = after_sent
         assert( after_sent == self.meta.char_offset)
 
-        # NOTE: DISABLED: 对fParams的修改
+        # NOTE: ENABLED: 对fParams的修改
+        if True:
+            touch = len(self.fParams)
+            not_touched : bool = (self.meta.char_num == touch)
+            print(f"修改meta: char_num {self.meta.char_num} -> {'[SAME]' if not_touched else touch}")
+            self.meta.char_num = len(self.fParams)
+
         assert(len(self.fParams) == self.meta.char_num)
         for fparam in self.fParams:
             fparam.write(dummy_fp)
@@ -50,8 +58,12 @@ class gDat:
             padding_size = 32 - (after_char % 32)
             dummy_fp.write(b'\x00' * padding_size)
             after_char = dummy_fp.tell()
-        if False:
-            self.meta.tex_offset = dummy_fp.tell()
+        if True:
+            touch = after_char
+            not_touched : bool = (self.meta.tex_offset == touch)
+            print(f"修改meta: tex_offset {self.meta.tex_offset} -> {'[SAME]' if not_touched else touch}")
+            self.meta.tex_offset = after_char
+
         assert(dummy_fp.tell() == self.meta.tex_offset)
         self.tex.write(dummy_fp)
 
@@ -63,7 +75,9 @@ class gDat:
             dummy_fp.write(b'\x00' * padding_size)
             after_tex = dummy_fp.tell()
         if True:
-            print(f"修改meta: s_motion_offset {self.meta.s_motion_offset} -> {after_tex}")
+            touch = after_tex
+            not_touched : bool = (self.meta.s_motion_offset == touch)
+            print(f"修改meta: s_motion_offset {self.meta.s_motion_offset} -> {'[SAME]' if not_touched else touch}")
             self.meta.s_motion_offset = after_tex
 
         del dummy_fp
@@ -132,3 +146,23 @@ class gDat:
             assert(self.tex.dds[:4] == b'DDS ')
         new_len = len(self.tex.dds)
         print(f"tex reimported from {filename} ({old_len} -> {new_len})")
+
+    def update_sentence_ctl(self, translation: list[list[str]], char2ctl_lookup: dict[str, int], validation_mode = False):
+        assert(self.meta.sentence_num == len(translation))
+        for i, local_sent in enumerate(translation):
+            assert(self.sentences[i].valid_jmk_num() == len(local_sent))
+            for j, local_jmk in enumerate(local_sent):
+                local_ctls = [char2ctl_lookup[ch] for ch in local_jmk]
+                if validation_mode:
+                    assert(self.sentences[i].jimaku_list[j].valid_len() == len(local_jmk))
+                    for k, ctl in enumerate(local_ctls):
+                        assert(self.sentences[i].jimaku_list[j].char_data[k] == ctl)
+                    print("jmk correct", local_jmk)
+                else:
+                    # old = copy(self.sentences[i].jimaku_list[j].char_data)
+                    self.sentences[i].jimaku_list[j].overwrite_ctl(local_ctls)
+                    # new = copy(self.sentences[i].jimaku_list[j].char_data)
+                    # for k, ctl in enumerate(new):
+                    #     assert(old[k] == ctl)
+                # print("ori_ctl", self.display_char_data(self.sentences[i].jimaku_list[j].char_data))
+                # print("translation_ctl:", local_ctls)

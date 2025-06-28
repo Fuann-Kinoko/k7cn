@@ -15,6 +15,7 @@ def extract(output_dir : str, dds_bytes : bytes, char_infos : list[stFontParam],
     :param scale_factor: 坐标缩放因子（逻辑坐标到物理坐标）
     :return: 提取的字符图像列表(PIL.Image)
     """
+    os.makedirs(output_dir, exist_ok=True)
     # 读取DDS图像 (自动解压为numpy数组)
     char_image_cnt = 0
     with Image(blob=dds_bytes) as img:
@@ -39,7 +40,7 @@ def extract(output_dir : str, dds_bytes : bytes, char_infos : list[stFontParam],
 
     print(f"成功提取 {char_image_cnt} 个字符图像")
 
-def reconstruction(input_dir : str, output_path : str, char_infos : list[stFontParam], max_width=1996):
+def reconstruction(input_dir : str, output_path : str, char_infos : list[stFontParam], max_width=2000):
     """
     从分割的字符图片重新构建DDS贴图
 
@@ -80,55 +81,38 @@ def reconstruction(input_dir : str, output_path : str, char_infos : list[stFontP
     # 4. 布局字符 (智能换行)
     current_x = 0
     current_y = 0
+    current_max_width = 0
     row_count = 0
-
-    # 存储每个字符的位置信息 (用于调试)
-    positions = []
 
     for i, (char_img, char_info) in enumerate(zip(char_images, char_infos)):
         # 获取物理宽度 (缩放后的)
-        info_u = char_info.u * 4
-        info_v = char_info.v * 4
-        info_width = char_info.w * 4
-        info_height = char_info.h * 4
-        char_width = char_img.width
-        char_height = char_img.height
-        assert(info_width == char_width)
-        assert(info_height == char_height)
+        w = char_info.w
+        h = char_info.h
+        assert(w*4 == char_img.width)
+        assert(h*4 == char_img.height)
+        step = w
+        if w in {35 , 28 , 21 , 47}:
+            step += 1
 
         # 检查是否需要换行
-        if current_x + char_width > max_width:
+        if current_x + step * 4 >= max_width:
             row_count += 1
             current_x = 0
             current_y += char_height
 
         # print(f"char[{i}] : w={char_width}, h={char_height}; u before={current_x}({info_u}), u after={current_x+char_width}; v={current_y}({info_v}); row={row_count}")
-        current_x = info_u # 我不知道为什么，似乎两个字符之间还可以重合
-        assert(info_u  == current_x)
-        assert(info_v  == current_y)
-
-        if current_x + char_width > max_width:
-            max_width = current_x + char_width
-
-        # 粘贴字符到画布
         canvas.composite(char_img, left=current_x, top=current_y)
-        # canvas.paste(char_img, (current_x, current_y))
 
-        # 记录位置信息
-        positions.append({
-            "index": i,
-            "u": current_x,
-            "v": current_y,
-            "w": char_width,
-            "h": char_height
-        })
+        current_x += step * 4
+        assert(current_x == char_info.u)
+        assert(current_y == char_info.v)
 
-        # 更新X位置
-        current_x += char_width
+        if current_x > current_max_width:
+            current_max_width = current_x
 
     # 5. 计算实际使用的画布高度
     actual_height = current_y + char_height
-    actual_width = max_width
+    actual_width = current_max_width
     print(f"canvas = {actual_width} x {actual_height}")
 
     # 裁剪画布到实际高度
@@ -158,11 +142,8 @@ def reconstruction(input_dir : str, output_path : str, char_infos : list[stFontP
         print(f"\n成功重建DDS贴图: {output_path}")
         print(f"行数: {row_count + 1}")
         print(f"压缩格式: BC7 (BC7)")
-
-        return positions
     except Exception as e:
         print(f"保存DDS失败: {e}")
-        return None
 
 def gen(output_path: str, unique_chars: str, max_width=2000):
     HEIGHT = 57
@@ -180,12 +161,12 @@ def gen(output_path: str, unique_chars: str, max_width=2000):
         kind = fontTool.check_kind(char)
         w = kind.get_width()
         h = kind.get_height()
+        assert(h == HEIGHT)
         step = w
         if kind in (fontTool.FontKind.KANJI , fontTool.FontKind.KATA , fontTool.FontKind.NUM , fontTool.FontKind.SPECIAL):
             step += 1
-        assert(h == HEIGHT)
 
-        if current_x + step*4 > max_width:
+        if current_x + step*4 >= max_width:
             row_count += 1
             current_x = 0
             current_y += HEIGHT*4
@@ -194,7 +175,6 @@ def gen(output_path: str, unique_chars: str, max_width=2000):
         canvas.composite(char_img, left=current_x, top=current_y)
         char_img.close()
 
-        step = kind.get_width()
         current_x += step*4
         if current_x > current_max_width:
             current_max_width = current_x

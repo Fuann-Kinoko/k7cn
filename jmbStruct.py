@@ -204,6 +204,21 @@ class stJimaku:
     def valid(self) -> bool:
         return self.char_data[0] != -1
 
+    def valid_len(self) -> int:
+        if not self.valid():
+            return 0
+        try:
+            return self.char_data.index(-2)
+        except ValueError:
+            return 0
+
+    def overwrite_ctl(self, new_ctls: list[int]):
+        assert(len(new_ctls) < JIMAKU_CHAR_MAX)
+        self.char_data = new_ctls
+        self.char_data.append(-2)
+        while len(self.char_data) < JIMAKU_CHAR_MAX:
+            self.char_data.append(-1)
+
     def read(self, fp):
         before = fp.tell()
         self.wait = struct.unpack('<i', fp.read(4))[0]          # s32
@@ -271,11 +286,8 @@ class stJimaku:
 
             # 解析char_data
             char_line = lines[2].strip()
-            assert(len(char_line) < JIMAKU_CHAR_MAX)
-            jimaku.char_data = [int(c) for c in char_line.split()]
-            jimaku.char_data.append(-2)
-            while len(jimaku.char_data) < JIMAKU_CHAR_MAX:
-                jimaku.char_data.append(-1)
+            char_ctls = [int(c) for c in char_line.split()]
+            jimaku.overwrite_ctl(char_ctls)
 
             # 填充空rubi
             rubis = []
@@ -297,6 +309,14 @@ class stOneSentence:
         self.jimaku_list : list[stJimaku] = []      # stJimaku对象列表（JIMAKU_LINE_MAX个） (16 * 424)
         if fp is not None:
             self.read(fp)
+
+    def valid_jmk_num(self) -> int:
+        assert(len(self.jimaku_list) > 0)
+        ret = 0
+        for jmk in self.jimaku_list:
+            if not jmk.valid():
+                return ret
+            ret += 1
 
     def read(self, fp):
         before = fp.tell()
