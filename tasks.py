@@ -88,25 +88,14 @@ def TaskValidation(self:JMBBaseTask):
         self.fail("Validation failed!")
 
 @basicTask
-def TaskRegenerate_SMALLER(self:JMBBaseTask):
+def TaskGenerateTex(self:JMBBaseTask):
     """
-    测试读取后，重新生成自己的DDS（但是更小）和对应的sentence，能否成功
-    """
-    unique_chars = self.context['unique_chars']
-    print("\n==== Regenerating Smaller DDS ====")
-
-    DDSTool.gen("gen.dds", unique_chars, fixed_max_width=False) # NOTE: SMALLER
-    self.jmb.reimport_tex("gen.dds")
-
-@basicTask
-def TaskRegenerate_BIGGER(self:JMBBaseTask):
-    """
-    测试读取后，重新生成自己的DDS（但是更大），能否成功
+    测试读取使用的字符后，重新生成自己的DDS Tex，能否成功
     """
     unique_chars = self.context['unique_chars']
-    print("\n==== Regenerating Bigger DDS ====")
+    print("\n==== Generate DDS Tex Based on used chars ====")
 
-    DDSTool.gen("gen.dds", unique_chars, fixed_max_width=True) # NOTE: BIGGER
+    DDSTool.gen("gen.dds", unique_chars, fixed_max_width=False)
     self.jmb.reimport_tex("gen.dds")
 
 @basicTask
@@ -206,7 +195,6 @@ def run_tasks(input_path:str, tasks:list[type], **task_args):
 
     shared_context = {}
 
-    # 提前处理文本数据并存入context
     text = deepcopy(jmk00010101)
     text_flatten = ''.join(t for s in text for t in s)
     ctl2char_lookup, char2ctl_lookup, unique_chars = fontTool.register(text_flatten)
@@ -217,7 +205,7 @@ def run_tasks(input_path:str, tasks:list[type], **task_args):
         'ctl2char_lookup': ctl2char_lookup,
         'char2ctl_lookup': char2ctl_lookup,
         'unique_chars': unique_chars,
-        **task_args  # 包含所有传入参数
+        **task_args
     })
 
     loader = JMBTestLoader(jmb=jmb, shared_context = shared_context)
@@ -240,10 +228,10 @@ if __name__ == '__main__':
     tasks = [
         TaskValidation,
         # TaskPrintFParams,
-        TaskPrintDDSInfo,
+        # TaskPrintDDSInfo,
         TaskTranslation,
         # TaskGeneratePreview,
-        TaskRegenerate_SMALLER,
+        TaskGenerateTex,
         TaskSave,
     ]
 

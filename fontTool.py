@@ -165,7 +165,6 @@ def save_preview_jimaku(save_path: str, jimaku: stJimaku, ctl2char_lookup: dict[
         canvas.composite(char_img, left=current_x, top=0, operator='atop')
         char_img.close()
 
-        # step = char_info.w # DEBUG
         step = kind.get_width()
         if kind in (FontKind.KANJI , FontKind.KATA , FontKind.NUM , FontKind.SPECIAL):
             step += 1

@@ -5,18 +5,16 @@ from dataclasses import dataclass
 import struct
 import os
 
-# 常量定义（与原始代码一致）
 def read_c_string(b):
     # 找到第一个 \x00 的位置，截断后面的内容
     null_pos = b.find(b'\x00')
-    if null_pos == -1:  # 如果没有 \x00，整个字符串都是有效的（但 C 字符串通常会有 \x00）
+    if null_pos == -1:
         return b.decode('ascii', errors='ignore')
     else:
         return b[:null_pos].decode('ascii', errors='ignore')
 def write_c_string(s, length):
-    # 先编码成 bytes
     encoded = s.encode('ascii') if s else b''
-    # 如果太长，截断（但 C 字符串需要至少 1 字节存放 \x00）
+    # 如果太长截断
     if len(encoded) >= length:
         return encoded[:length-1] + b'\x00'  # 确保最后一个字节是 \x00
     else:
@@ -36,7 +34,6 @@ class MetaData:
         if fp is not None:
             self.read(fp)
 
-    # 从文件流读取数据
     def read(self, fp):
         self.sentence_num = struct.unpack('<h', fp.read(2))[0]      # s16
         self.char_num = struct.unpack('<h', fp.read(2))[0]          # s16
@@ -58,18 +55,15 @@ class MetaData:
         fp.write(struct.pack('<I', self.s_motion_offset))
         fp.write(struct.pack(f'<{self.sentence_num}I', *self.s_motion_size_tbl))
 
-    # 序列化并保存到文件
     def dump(self, filename):
         with open(filename, 'wb') as f:
             self.write(f)
 
-    # 从文件加载数据
     @classmethod
     def load(cls, filename):
         meta = cls()
         raise NotImplementedError("TODO")
 
-    # 调试用：打印数据
     def __repr__(self):
         return (
             f"MetaData(sentence_num={self.sentence_num}, "
@@ -85,8 +79,8 @@ class stInfo:
     def __init__(self, fp = None):
         self.STRUCT_SIZE = 76
         self.wait = 0            # s32
-        self.hps_file = ''       # 字符串（FILE_LENGTH字节）
-        self.mth_file = ''       # 字符串（FILE_LENGTH字节）
+        self.hps_file = ''       # （FILE_LENGTH bytes）
+        self.mth_file = ''       # （FILE_LENGTH bytes）
         self.back_locate = 0     # s16
         self.countinue = 0       # s16
         self.key = 0             # s16
@@ -125,8 +119,7 @@ class stInfo:
 
     @classmethod
     def load(cls, fp):
-        info = cls()
-        raise NotImplementedError("TODO")
+        NotImplemented
 
     def __repr__(self):
         return (f"stInfo(wait={self.wait}, hps_file='{self.hps_file}', "
@@ -165,7 +158,7 @@ class stRubiDat:
         assert(after - before == self.STRUCT_SIZE)
 
     def dump(self, fp):
-        raise NotImplementedError("TODO")
+        NotImplemented
 
     def clear(self):
         self.from_num = -1
@@ -345,12 +338,12 @@ class stOneSentence:
         assert(after - before == self.STRUCT_SIZE)
 
     def dump(self, filename):
-        raise NotImplementedError("TODO")
+        NotImplemented
 
     @classmethod
     def load(cls, fp):
         sentence = cls()
-        raise NotImplementedError("TODO")
+        NotImplemented
 
     def __repr__(self):
         return (f"stOneSentence(\n  info={self.info},\n  "
@@ -372,7 +365,7 @@ class stFontParam:
         fp.write(struct.pack('<4H', self.u, self.v, self.w, self.h))
 
     def dump(self, fp):
-        raise NotImplementedError("TODO")
+        NotImplemented
 
     @classmethod
     def load(cls, fp):
@@ -413,7 +406,6 @@ class texMeta:
         self.dds_size = struct.unpack('<I', fp.read(4))[0]
         after = fp.tell()
         assert(after - before == self.STRUCT_SIZE)
-        NotImplemented
 
     def write(self, fp):
         before = fp.tell()
@@ -460,4 +452,5 @@ class stTex:
         return cls(fp)
 
     def __repr__(self):
+        # TODO: 更新repr
         return (f"stTex : len(header) = {len(self.header)}, len(dds) = {len(self.dds)}")
