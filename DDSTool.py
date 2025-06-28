@@ -40,7 +40,7 @@ def extract(output_dir : str, dds_bytes : bytes, char_infos : list[stFontParam],
 
     print(f"成功提取 {char_image_cnt} 个字符图像")
 
-def reconstruction(input_dir : str, output_path : str, char_infos : list[stFontParam], max_width=2000):
+def reconstruction(input_dir : str, output_path : str, char_infos : list[stFontParam], max_width=2048, fixed_max_width: bool = False):
     """
     从分割的字符图片重新构建DDS贴图
 
@@ -112,8 +112,7 @@ def reconstruction(input_dir : str, output_path : str, char_infos : list[stFontP
 
     # 5. 计算实际使用的画布高度
     actual_height = current_y + char_height
-    actual_width = current_max_width
-    # actual_width = max_width
+    actual_width = max_width if fixed_max_width else current_max_width
     print(f"canvas = {actual_width} x {actual_height}")
 
     # 裁剪画布到实际高度
@@ -146,7 +145,7 @@ def reconstruction(input_dir : str, output_path : str, char_infos : list[stFontP
     except Exception as e:
         print(f"保存DDS失败: {e}")
 
-def gen(output_path: str, unique_chars: str, max_width=2000):
+def gen(output_path: str, unique_chars: str, max_width=2048, fixed_max_width: bool = False):
     HEIGHT = 57
     canvas_width = max_width
     canvas_height = HEIGHT * 4 * 10
@@ -180,8 +179,7 @@ def gen(output_path: str, unique_chars: str, max_width=2000):
             current_max_width = current_x
 
     actual_height = current_y + HEIGHT * 4
-    actual_width = current_max_width
-    # actual_width = max_width
+    actual_width = max_width if fixed_max_width else current_max_width
     print(f"canvas = {actual_width} x {actual_height}")
 
     canvas.crop(0, 0, width=actual_width, height=actual_height)
@@ -211,3 +209,9 @@ def gen(output_path: str, unique_chars: str, max_width=2000):
     except Exception as e:
         print(f"保存DDS失败: {e}")
         return None
+
+def print_info(dds_bytes: bytes):
+    print("DDS Size: ", len(dds_bytes))
+    with Image(blob=dds_bytes) as img:
+        width, height = img.size
+        print(f"DDS Canvas Size: {width}x{height}")

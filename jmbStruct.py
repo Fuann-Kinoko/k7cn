@@ -1,5 +1,5 @@
-from jmbDefine import gDat
 import jmbConst
+import jmbUtils
 from dataclasses import dataclass
 
 import struct
@@ -263,7 +263,7 @@ class stJimaku:
             # 写入disp_time
             fp.write(f"disp_time = {self.disp_time}\n")
             # 写入char_data
-            char_str = " ".join(str(c) for c in gDat.display_char_data(self.char_data))
+            char_str = " ".join(str(c) for c in jmbUtils.display_char_data(self.char_data))
             fp.write(f"{char_str}\n")
 
     @classmethod
@@ -391,20 +391,64 @@ class stFontParam:
             self.h == other.h
         )
 
+class texMeta:
+    def __init__(self, fp=None):
+        self.STRUCT_SIZE = 72
+        self.w = 0              # u16, 2 bytes
+        self.h = 0              # u16, 2 bytes
+        self.dds_size = 0       # u32, 4 bytes
+        if fp is not None:
+            self.read(fp)
+
+    def read(self, fp):
+        before = fp.tell()
+        assert(fp.read(4) == b'\x00'*4)
+        assert(fp.read(4) == b'\x06\x00\x00\x00')
+        self.w = struct.unpack('<H', fp.read(2))[0]
+        self.h = struct.unpack('<H', fp.read(2))[0]
+        assert(fp.read(4) == b'\x00'*4)
+        assert(fp.read(4) == b'@\x00\x00\x00')
+        assert(fp.read(44) == b'\x00' * 44)
+        assert(fp.read(4) == b'K7TX')
+        self.dds_size = struct.unpack('<I', fp.read(4))[0]
+        after = fp.tell()
+        assert(after - before == self.STRUCT_SIZE)
+        NotImplemented
+
+    def write(self, fp):
+        before = fp.tell()
+        fp.write(b'\x00'*4)
+        fp.write(b'\x06\x00\x00\x00')
+        fp.write(struct.pack('<H', self.w))
+        fp.write(struct.pack('<H', self.h))
+        fp.write(b'\x00'*4)
+        fp.write(b'@\x00\x00\x00')
+        fp.write(b'\x00'*44)
+        fp.write(b'K7TX')
+        fp.write(struct.pack('<I', self.dds_size))
+        after = fp.tell()
+        assert(after - before == self.STRUCT_SIZE)
+
+    def dump(self, filename):
+        NotImplemented
+
+    def load(self, filename):
+        NotImplemented
+
 class stTex:
     def __init__(self, fp=None):
-        self.header : bytes
+        self.header : texMeta
         self.dds : bytes
         if fp is not None:
             self.read(fp)
 
     def read(self, fp):
-        self.header = fp.read(jmbConst.TEX_HEADER_SIZE)
-        self.dds = fp.read()
+        self.header = texMeta(fp)
+        self.dds = fp.read(self.header.dds_size)
         assert(self.dds[:4] == b'DDS ')
 
     def write(self, fp):
-        fp.write(self.header)
+        self.header.write(fp)
         fp.write(self.dds)
 
     def dump(self, filename):
