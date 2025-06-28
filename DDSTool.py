@@ -1,9 +1,11 @@
 import os
 import shutil
 import subprocess
+import fontTool
 from jmbStruct import stFontParam
 from wand.image import Image
 from wand.display import display
+from wand.color import Color
 
 def extract(output_dir : str, dds_bytes : bytes, char_infos : list[stFontParam], scale_factor=4, should_store = False):
     """
@@ -46,9 +48,6 @@ def reconstruction(input_dir : str, output_path : str, char_infos : list[stFontP
     :param char_infos: 字符位置信息列表
     :param max_width: 最大宽度 (物理像素)
     """
-    from wand.image import Image
-    from wand.color import Color
-
     # 1. 加载所有字符图片
     char_images = []
     for i in range(len(char_infos)):
@@ -161,6 +160,73 @@ def reconstruction(input_dir : str, output_path : str, char_infos : list[stFontP
         print(f"压缩格式: BC7 (BC7)")
 
         return positions
+    except Exception as e:
+        print(f"保存DDS失败: {e}")
+        return None
+
+def gen(output_path: str, unique_chars: str, max_width=2000):
+    HEIGHT = 57
+    canvas_width = max_width
+    canvas_height = HEIGHT * 4 * 10
+
+    canvas = Image(width=canvas_width, height=canvas_height, background=Color('transparent'))
+
+    # 4. 布局字符 (智能换行)
+    current_x = 0
+    current_y = 0
+    row_count = 0
+    current_max_width = 0
+    for char in unique_chars:
+        kind = fontTool.check_kind(char)
+        w = kind.get_width()
+        h = kind.get_height()
+        step = w
+        if kind in (fontTool.FontKind.KANJI , fontTool.FontKind.KATA , fontTool.FontKind.NUM , fontTool.FontKind.SPECIAL):
+            step += 1
+        assert(h == HEIGHT)
+
+        if current_x + step*4 > max_width:
+            row_count += 1
+            current_x = 0
+            current_y += HEIGHT*4
+
+        char_img = fontTool.gen_char_image(char)
+        canvas.composite(char_img, left=current_x, top=current_y)
+        char_img.close()
+
+        step = kind.get_width()
+        current_x += step*4
+        if current_x > current_max_width:
+            current_max_width = current_x
+
+    actual_height = current_y + HEIGHT * 4
+    actual_width = current_max_width
+    print(f"canvas = {actual_width} x {actual_height}")
+
+    canvas.crop(0, 0, width=actual_width, height=actual_height)
+
+    try:
+        canvas.format='png'
+        canvas.save(filename="temp.png")
+        canvas.close()
+
+        # 使用Wand保存为DDS，BC7压缩
+        command = [
+            "texconv.exe",
+            "-f", "BC7_UNORM_SRGB",  # 输出格式
+            "-ft", "dds",            # 输出文件类型
+            "-srgb",                 # 输入为 sRGB，输出也为 sRGB
+            "-m", "1",               # 禁用 mipmap
+            "-y",                    # 覆盖输出文件（不提示）
+            "temp.png",              # 输入文件
+        ]
+        subprocess.run(command, check=True)
+        shutil.move("temp.dds", output_path)
+        os.remove("temp.png")
+
+        print(f"\n成功重建DDS贴图: {output_path}")
+        print(f"行数: {row_count + 1}")
+        print(f"压缩格式: BC7 (BC7)")
     except Exception as e:
         print(f"保存DDS失败: {e}")
         return None

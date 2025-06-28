@@ -68,6 +68,9 @@ class FontKind(Enum):
             case _:
                 NotImplemented
 
+    def get_height(self) -> int:
+        return 57
+
 
 def check_kind(char: str) -> FontKind:
     if len(char) != 1:
@@ -78,10 +81,10 @@ def check_kind(char: str) -> FontKind:
     elif char == "“" or char == "”":
         return FontKind.QUOTE
     # ひらがな（平假名）
-    elif (0x3040 <= code <= 0x309F) or (char in {"、", "。", "，", "．", "・", "ー", "―", "‐", "～", "…", "‥"}):
+    elif (0x3040 <= code <= 0x309F) or (char in {"、", "。", "，", "．", "・", "～", "…", "‥"}):
         return FontKind.KANA
     # カタカナ（片假名）
-    elif 0x30A0 <= code <= 0x30FF:
+    elif (char not in {"ー", "―", "‐"}) and (0x30A0 <= code <= 0x30FF):
         return FontKind.KATA
     # 特殊字符（如「殺」「死」）
     elif char == "殺" or char == "死":
@@ -90,28 +93,39 @@ def check_kind(char: str) -> FontKind:
     else:
         return FontKind.KANJI
 
-def register(input: str) -> tuple[dict[int, str], str]:
+def register(input: str) -> tuple[dict[int, str], dict[str, int], str]:
     counter = 0
     unique_jmk = ""
-    int2char_dict = {}
-    char2int_dict = {}
+    ctl2char_dict = {}
+    char2ctl_dict = {}
+    ctl2char_dict[-3] = " "
+    char2ctl_dict[" "] = -3
+
     for char in input:
         if char == "、" or char == "。" or char == " ":
-            int2char_dict[counter] = " "
             continue
-        if char not in char2int_dict:
+        if char not in char2ctl_dict:
             unique_jmk += char
-            int2char_dict[counter] = char
-            char2int_dict[char] = counter
+            if char == "殺":
+                ctl2char_dict[counter | SATSU_FLAG] = char
+                char2ctl_dict[char] = counter | SATSU_FLAG
+            elif char == "死":
+                ctl2char_dict[counter | SHI_FLAG] = char
+                char2ctl_dict[char] = counter | SHI_FLAG
+            else:
+                ctl2char_dict[counter] = char
+                char2ctl_dict[char] = counter
             counter += 1
-    int2char_dict[-3] = " "
-    return int2char_dict, unique_jmk
+    return ctl2char_dict, char2ctl_dict, unique_jmk
 
 
-def gen_char_image(char: str, info: stFontParam) -> Image:
+def gen_char_image(char: str, info: stFontParam = None) -> Image:
     assert(len(char) == 1)
-    img = Image(width=info.w*4, height=info.h*4, background=Color('transparent'))
     kind = check_kind(char)
+    if info is not None:
+        img = Image(width=info.w*4, height=info.h*4, background=Color('transparent'))
+    else:
+        img = Image(width=kind.get_width()*4, height=kind.get_height()*4, background=Color('transparent'))
     img.font = Font(
         path=font_path,
         color = Color('white'),
@@ -123,7 +137,7 @@ def gen_char_image(char: str, info: stFontParam) -> Image:
     img.caption(text=char)
     return img
 
-def save_preview_jimaku(save_path: str, jimaku: stJimaku, fParams: list[stFontParam], char_ctl_lookup: dict[int, str]):
+def save_preview_jimaku(save_path: str, jimaku: stJimaku, char_ctl_lookup: dict[int, str], fParams: list[stFontParam] = None):
     char_data = gDat.display_char_data(jimaku.char_data)
     canvas = Image(width=35*4*len(char_data), height=57*4, background=Color('black'))
     current_x = 0
@@ -132,10 +146,10 @@ def save_preview_jimaku(save_path: str, jimaku: stJimaku, fParams: list[stFontPa
             ctl &= 0x0fff
         char = char_ctl_lookup[ctl]
         kind = check_kind(char)
-        if char != " ":
+        if (fParams is not None) and (char != " "):
             char_info = fParams[ctl]
         else:
-            char_info = stFontParam(u=0,v=0,w=21,h=57)
+            char_info = stFontParam(u=0,v=0,w=kind.get_width(),h=kind.get_height())
         print(f"ctl = {ctl}; char = {char}; Kind = {kind};\tparams = {char_info}")
         char_img = gen_char_image(char, char_info)
         canvas.composite(char_img, left=current_x, top=0, operator='atop')
@@ -152,7 +166,33 @@ def save_preview_jimaku(save_path: str, jimaku: stJimaku, fParams: list[stFontPa
     canvas.save(filename=save_path)
     canvas.close()
 
-def save_char_image(save_path: str, char: str, info: stFontParam):
+def save_char_image(save_path: str, char: str, info: stFontParam = None):
     img = gen_char_image(char, info)
     img.save(filename=save_path)
     img.close()
+
+def genFParams(unique_chars : str, max_width = 500) -> list[stFontParam]:
+    ret_list : list[stFontParam] = []
+    HEIGHT = 57
+    u = 0
+    v = 0
+    row_count = 0
+    for char in unique_chars:
+        kind = check_kind(char)
+        w = kind.get_width()
+        h = kind.get_height()
+        step = w
+        if kind in (FontKind.KANJI , FontKind.KATA , FontKind.NUM , FontKind.SPECIAL):
+            step += 1
+
+        if u + step > max_width:
+            row_count += 1
+            u = 0
+            v += HEIGHT
+
+        param = stFontParam(u=u,v=v,w=w,h=h)
+        ret_list.append(param)
+
+        u += step
+
+    return ret_list

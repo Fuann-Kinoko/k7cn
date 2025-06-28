@@ -359,6 +359,16 @@ class stFontParam:
     def __repr__(self):
         return (f"stFontParam(u={self.u}, v={self.v}, w={self.w}, h={self.h})")
 
+    def __eq__(self, other):
+        if not isinstance(other, stFontParam):
+            return False
+        return (
+            self.u == other.u and
+            self.v == other.v and
+            self.w == other.w and
+            self.h == other.h
+        )
+
 class stTex:
     def __init__(self, fp=None):
         self.header : bytes

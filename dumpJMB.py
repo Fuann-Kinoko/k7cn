@@ -69,20 +69,29 @@ def temp_modify(jmb : gDat):
 
     # jmb.sentences[0].jimaku_list[0].char_data = modified
     used_chars = "そこが巣だこのアパートが？連中の群れだ調べでは、14匹が棲みついている全部、殺っていいのか？1匹は、生け捕りにしてくれココの親玉が居るはずだ情報は？会えばわかるさ“笑う顔”とは決定的に違う了解した神に笑いを…悪魔に慈悲を…"
-    ctl_lookup, unique_chars = fontTool.register(used_chars)
+    ctl_lookup, char2ctl_lookup, unique_chars = fontTool.register(used_chars)
+    DDSTool.gen("gen_from_scratch.dds", unique_chars)
+    oldParams = deepcopy(jmb.fParams)
+    jmb.fParams = fontTool.genFParams(unique_chars)
+    jmb.reimport_tex("gen_from_scratch.dds")
 
-    for i in range(jmb.meta.sentence_num):
-        sent = jmb.sentences[i]
-        print("+sent", i)
-        print("\t info", sent.info)
-        for jmk_idx, jmk in enumerate(sent.jimaku_list):
-            if not jmk.valid():
-                break
-            print("\t char_data:", len(jmk.char_data), jmk.char_data)
-            print("\t rubi_data:", len(jmk.rubi_data), jmk.rubi_data)
-            target_path = f"jmks/sent{i}/{jmk_idx:02d}"
-            jmk.dump(target_path)
-            fontTool.save_preview_jimaku(target_path+".png", jmk, jmb.fParams, ctl_lookup)
+    for i, char in enumerate(unique_chars):
+        kind = fontTool.check_kind(char)
+        if oldParams[i] != jmb.fParams[i]:
+            print(f"diff: [{i:02d}]{char}\t{kind}\t{oldParams[i]} -> {jmb.fParams[i]}")
+
+    # for i in range(jmb.meta.sentence_num):
+    #     sent = jmb.sentences[i]
+    #     print("+sent", i)
+    #     print("\t info", sent.info)
+    #     for jmk_idx, jmk in enumerate(sent.jimaku_list):
+    #         if not jmk.valid():
+    #             break
+    #         print("\t char_data:", len(jmk.char_data), jmk.char_data)
+    #         print("\t rubi_data:", len(jmk.rubi_data), jmk.rubi_data)
+    #         target_path = f"jmks/sent{i}/{jmk_idx:02d}"
+    #         jmk.dump(target_path)
+    #         fontTool.save_preview_jimaku(target_path+".png", jmk, jmb.fParams, ctl_lookup)
 
     # jmb.sentences[0].jimaku_list[0].rubi_data[0].clear()
     # jmb.sentences[0].jimaku_list[0].dump("dummy.jmk")
@@ -148,11 +157,11 @@ if __name__ == "__main__":
     # jmk1 = sent0.jimaku_list[1]
     # print("jmk1", gDat.display_char_data(jmk1.char_data)) # このアパートが？ 1, 5, 6, 7, 8, 9, 2, 10; -2表示RET，-1表示空
 
-    print("\n==== Validation ====")
-    print(f"Generation Validation : {jmb.no_diff_with(filename)}")
+    # print("\n==== Validation ====")
+    # print(f"Generation Validation : {jmb.no_diff_with(filename)}")
 
     temp_modify(jmb)
-    # jmb.write_to_file("testmod.jmb")
+    jmb.write_to_file("testmod.jmb")
 
     # print("\n==== DDS Extraction ====")
     # DDSTool.extract("dds_font", jmb.tex.dds, jmb.fParams, should_store = True)
