@@ -2,6 +2,7 @@ def display_char_data(lst: list[int]) -> list[int]:
     try:
         first_neg2_index = lst.index(-2)
     except ValueError:
+        print("ERROR: lst =", lst)
         raise ValueError("no RET in char data")
 
     # 检查第一个-2右边的所有元素是否都是-1

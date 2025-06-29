@@ -9,7 +9,8 @@ from wand.font import Font
 from wand.display import display
 from wand.drawing import Drawing
 
-font_path = "HiraginoMinCho-W6.ttc"
+Font_SourceHan = "SourceHanSerifCN-Bold.otf"
+Font_HiraginoMincho = "HiraginoMinCho-W6.ttc"
 SATSU_FLAG = 0x8000
 SHI_FLAG = 0x7000
 
@@ -17,8 +18,8 @@ DEFAULT_FACE_SIZE = 142         # scale = 7.5
 KATA_FACE_SIZE = 112            # scale = 6
 KANA_FACE_SIZE = 104            # scale = 5.5
 SPECIAL_FACE_SIZE = 188         # scale = 10
-NUM_FACE_SIZE = 112             # scale = 6
-QUOTE_FACE_SIZE = 88            # scale = 6
+NUM_FACE_SIZE = 142             # scale = 7.5
+QUOTE_FACE_SIZE = 142           # scale = 7.5
 
 DEFAULT_WIDTH = 35
 KATA_WIDTH  = 28
@@ -134,6 +135,21 @@ def gen_char_image(char: str, info: stFontParam = None) -> Image:
         img = Image(width=info.w*4, height=info.h*4, background=Color('transparent'))
     else:
         img = Image(width=kind.get_width()*4, height=kind.get_height()*4, background=Color('transparent'))
+
+    if kind == FontKind.QUOTE:
+        if char == "“":
+            img = Image(filename="assets/quote_open.png")
+        elif char == "”":
+            img = Image(filename="assets/quote_close.png")
+        else:
+            assert(False and "Unreachable")
+        return img
+
+    if kind == FontKind.KANJI and char != "？":
+        font_path = Font_SourceHan
+    else:
+        font_path = Font_HiraginoMincho
+
     img.font = Font(
         path=font_path,
         color = Color('white'),
@@ -142,7 +158,12 @@ def gen_char_image(char: str, info: stFontParam = None) -> Image:
         size = kind.get_face_size()
     )
     img.gravity = 'center'
+
     img.caption(text=char)
+
+    if font_path is Font_SourceHan:
+        img.roll(y=-16)
+
     return img
 
 def save_preview_jimaku(save_path: str, jimaku: stJimaku, ctl2char_lookup: dict[int, str], fParams: list[stFontParam] = None):

@@ -5,3 +5,5 @@
 chore.py
 dumpJMB.py
 testFont.py
+!assets/
+!assets/**
