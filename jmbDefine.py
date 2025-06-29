@@ -11,13 +11,13 @@ class gDat:
         self.sentences : list[stOneSentence] = None
         self.fParams : list[stFontParam] = None
         self.tex : stTex = None
+        self.motions : list[bytes] = None
 
         self.end_by_tex : bool = False
         if fp is not None:
             self.read(fp)
 
     def read(self, fp):
-        file_start = fp.tell()
         self.meta = MetaData(fp)
 
         fp.seek(self.meta.sentence_offset)
@@ -38,17 +38,13 @@ class gDat:
             self.end_by_tex = (self.meta.s_motion_offset == after_tex + padding_size)
         else:
             self.end_by_tex = (self.meta.s_motion_offset == after_tex)
-        assert(self.end_by_tex) # TODO: 还没做
 
-        # TODO: 还没做
         if not self.end_by_tex:
             fp.seek(self.meta.s_motion_offset)
+            assert(len(self.meta.s_motion_size_tbl) == self.meta.sentence_num)
             self.motions = []
-            for size in self.meta.s_motion_size_tbl:
-                if size > 0:
-                    self.motions.append(fp.read(size))
-                else:
-                    self.motions.append(b'')
+            for cur_motion_size in self.meta.s_motion_size_tbl:
+                self.motions.append(fp.read(cur_motion_size))
 
 
     def ready_to_write(self) -> bool:
@@ -57,7 +53,9 @@ class gDat:
         ready &= (self.sentences != None)
         ready &= (self.fParams != None)
         ready &= (self.tex != None)
-        ready &= self.end_by_tex # TODO: motion
+        if self.end_by_tex:
+            return ready
+        ready &= (self.motions != None)
         return ready
 
     def write_to_file(self, writepath:str, validation = True):
@@ -110,7 +108,6 @@ class gDat:
         self.tex.write(dummy_fp)
 
         # NOTE: ENABLED: 对s_motion_offset的修改
-        assert(self.end_by_tex) # TODO: motion
         after_tex = dummy_fp.tell()
         if after_tex % 32 != 0:
             padding_size = 32 - (after_tex % 32)
@@ -160,6 +157,10 @@ class gDat:
             fp.write(b'\x00' * padding_size)
         assert(fp.tell() == self.meta.s_motion_offset)
 
+        if not self.end_by_tex:
+            for motion in self.motions:
+                fp.write(motion)
+
     def no_diff_with(self, filename: str) -> bool:
         gen_buf = io.BytesIO()
         self.write(gen_buf, validation=False)
@@ -169,7 +170,8 @@ class gDat:
         return ori_data == gen_data
 
     def reimport_tex(self, filename: str):
-        assert(self.end_by_tex) # TODO: motion还没有做
+        assert(os.path.exists(filename))
+
         old_len = len(self.tex.dds)
         old_w = self.tex.header.w
         old_h = self.tex.header.h
