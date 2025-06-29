@@ -2,7 +2,7 @@ import os
 import fontTool
 import DDSTool
 import jmbUtils
-from jmbDefine import gDat
+from jmbDefine import BaseGdat, JmkKind, gDat_JA, gDat_US
 
 from copy import copy, deepcopy
 import unittest
@@ -43,12 +43,12 @@ jmk00010101 : list[list[str]] = [
 ]
 
 class JMBBaseTask(TestCase):
-    jmb = gDat()
+    jmb : gDat_JA | gDat_US
     context = {}
     params = {}
 
     @classmethod
-    def set_context(cls, jmb:gDat, shared_context: dict):
+    def set_context(cls, jmb:gDat_JA | gDat_US, shared_context: dict):
         cls.jmb = jmb
         cls.context = shared_context
 
@@ -64,7 +64,7 @@ class TaskWrapper:
         self.params = params
 
 class JMBTestLoader(unittest.TestLoader):
-    def __init__(self, jmb:gDat=None, shared_context: dict = None):
+    def __init__(self, jmb:gDat_JA | gDat_US=None, shared_context: dict = None):
         super().__init__()
         self.jmb = jmb
         self.shared_context = shared_context or {}
@@ -153,6 +153,11 @@ def TaskDumpDDSTex(self:JMBBaseTask):
     self.jmb.tex.dump(dump_path)
 
 @basicTask
+def TaskPrintMetaData(self:JMBBaseTask):
+    print("\n==== Printing MetaData ====")
+    print(self.jmb.meta)
+
+@basicTask
 def TaskPrintFParams(self:JMBBaseTask):
     print("\n==== Printing FParams ====")
     for param in self.jmb.fParams:
@@ -164,7 +169,8 @@ def TaskPrintDDSInfo(self:JMBBaseTask):
     print("tex_offset =", self.jmb.meta.tex_offset)
     print("header =", self.jmb.tex.header)
     DDSTool.print_info(self.jmb.tex.dds)
-    print("jmb after_tex_pos =", self.jmb.meta.s_motion_offset)
+    if isinstance(self.jmb, gDat_JA):
+        print("jmb after_tex_pos =", self.jmb.meta.s_motion_offset)
 
 @basicTask
 def TaskSave(self:JMBBaseTask):
@@ -230,8 +236,11 @@ def TaskTranslation(self:JMBBaseTask):
 
 def run_tasks(input_path:str, tasks:list[type], **task_args):
     task_args['original_path'] = input_path
-    with open(input_path, 'rb') as fp:
-        jmb = gDat(fp)
+
+    jmb_name = os.path.basename(input_path)
+    kind: JmkKind = JmkKind.JA if ('J' in jmb_name[:-4]) else JmkKind.US
+    print(f"\n==== Running Task on {jmb_name} ({kind}) ====")
+    jmb = BaseGdat.create(input_path, kind)
 
     shared_context = {}
 
@@ -272,21 +281,23 @@ if __name__ == '__main__':
     ]
 
     tasks = [
-        TaskValidation,
+        TaskPrintMetaData,
         # TaskPrintFParams,
-        # TaskPrintDDSInfo,
+        TaskPrintDDSInfo,
+
+        TaskValidation,
         # TaskWrapper(TaskExtractChars, extracted_dir="dds_font"),
         # TaskWrapper(TaskDumpDDSTex, dump_path="DDS_ori.dds"),
 
-        TaskTranslation,
-        # TaskWrapper(TaskGenerateTex, import_from_file = True, dds_path = 'gen.dds'),
-        TaskWrapper(TaskGenerateTex, import_from_file = False),
+        # TaskTranslation,
+        # # TaskWrapper(TaskGenerateTex, import_from_file = True, dds_path = 'gen.dds'),
+        # TaskWrapper(TaskGenerateTex, import_from_file = False),
 
-        TaskWrapper(TaskDumpDDSTex, dump_path="DDS_mod.dds"),
-        # TaskWrapper(TaskExtractChars, extracted_dir="modded_dds_font"),
+        # TaskWrapper(TaskDumpDDSTex, dump_path="DDS_mod.dds"),
+        # # TaskWrapper(TaskExtractChars, extracted_dir="modded_dds_font"),
         # TaskWrapper(TaskGeneratePreview, preview_dir="jmks"),
 
-        TaskWrapper(TaskSave, output_path="testmod.jmb"),
+        # TaskWrapper(TaskSave, output_path="testmod.jmb"),
     ]
 
     for file in files:

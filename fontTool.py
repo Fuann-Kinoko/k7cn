@@ -1,6 +1,6 @@
 from enum import Enum, auto
-from jmbStruct import stFontParam, stJimaku
-from jmbDefine import gDat
+from jmbStruct import stFontParam, stJimaku_JA
+from jmbDefine import gDat_JA
 import jmbUtils
 
 from wand.image import Image
@@ -166,7 +166,7 @@ def gen_char_image(char: str, info: stFontParam = None) -> Image:
 
     return img
 
-def save_preview_jimaku(save_path: str, jimaku: stJimaku, ctl2char_lookup: dict[int, str], fParams: list[stFontParam] = None):
+def save_preview_jimaku(save_path: str, jimaku: stJimaku_JA, ctl2char_lookup: dict[int, str], fParams: list[stFontParam] = None):
     char_data = jmbUtils.display_char_data(jimaku.char_data)
     canvas = Image(width=35*4*2*len(char_data), height=57*4, background=Color('black'))
     current_x = 0

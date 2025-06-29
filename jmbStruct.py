@@ -22,7 +22,49 @@ def write_c_string(s, length):
         padding = bytes([0xCD] * (length - len(encoded) - 1))
         return encoded + b'\x00' + padding
 
-class MetaData:
+class MetaData_US:
+    def __init__(self, fp = None):
+        self.sentence_num : int = 0                 # s16
+        self.char_num : int = 0                     # s16
+        self.sentence_offset : int = 0              # u32
+        self.char_offset : int = 0                  # u32
+        self.tex_offset : int = 0                   # u32
+
+        if fp is not None:
+            self.read(fp)
+
+    def read(self, fp):
+        self.sentence_num = struct.unpack('<h', fp.read(2))[0]      # s16
+        self.char_num = struct.unpack('<h', fp.read(2))[0]          # s16
+        self.sentence_offset = struct.unpack('<I', fp.read(4))[0]   # u32
+        self.char_offset = struct.unpack('<I', fp.read(4))[0]       # u32
+        self.tex_offset = struct.unpack('<I', fp.read(4))[0]        # u32
+
+    def write(self, fp):
+        fp.write(struct.pack('<h', self.sentence_num))
+        fp.write(struct.pack('<h', self.char_num))
+        fp.write(struct.pack('<I', self.sentence_offset))
+        fp.write(struct.pack('<I', self.char_offset))
+        fp.write(struct.pack('<I', self.tex_offset))
+
+    def dump(self, filename):
+        NotImplemented
+
+    @classmethod
+    def load(cls, filename):
+        meta = cls()
+        NotImplemented
+
+    def __repr__(self):
+        return (
+            f"MetaData_US(jimaku_num={self.sentence_num}, "
+            f"char_num={self.char_num}, "
+            f"jimaku_offset={self.sentence_offset}, "
+            f"char_offset={self.char_offset}, "
+            f"tex_offset={self.tex_offset}, "
+        )
+
+class MetaData_JA:
     def __init__(self, fp = None):
         self.sentence_num : int = 0                 # s16
         self.char_num : int = 0                     # s16
@@ -30,7 +72,7 @@ class MetaData:
         self.char_offset : int = 0                  # u32
         self.tex_offset : int = 0                   # u32
         self.s_motion_offset : int = 0              # u32
-        self.s_motion_size_tbl : list[int] = []     # u32[]
+        self.s_motion_size_tbl : list[int] = []     # u32[] NOTE: 不考虑tbl，大小至少为20
         if fp is not None:
             self.read(fp)
 
@@ -62,7 +104,7 @@ class MetaData:
     @classmethod
     def load(cls, filename):
         meta = cls()
-        raise NotImplementedError("TODO")
+        NotImplemented
 
     def __repr__(self):
         return (
@@ -72,7 +114,7 @@ class MetaData:
             f"char_offset={self.char_offset}, "
             f"tex_offset={self.tex_offset}, "
             f"s_motion_offset={self.s_motion_offset}, "
-            f"s_motion_size_tbl={self.s_motion_size_tbl[:3]}...)"
+            f"s_motion_size_tbl={self.s_motion_size_tbl})"
         )
 
 class stInfo:
@@ -176,8 +218,107 @@ class stRubiDat:
         else:
             return f""
 
+class stJimaku_US:
+    def __init__(self, fp = None):
+        self.STRUCT_SIZE = 264
+        self.wait = 0                               # s32
+        self.disp_time = 0                          # s32
+        self.char_data : list[int]  = []            # s16[jmbConst.US_JIMAKU_CHAR_MAX] (2 * 128 = 256)
 
-class stJimaku:
+        if fp is not None:
+            self.read(fp)
+
+    def valid(self) -> bool:
+        return self.char_data[0] != -1
+
+    def valid_len(self) -> int:
+        if not self.valid():
+            return 0
+        try:
+            return self.char_data.index(-2)
+        except ValueError:
+            return 0
+
+    def overwrite_ctl(self, new_ctls: list[int]):
+        assert(len(new_ctls) > 0)
+        needs_padding : bool = not (-2 in new_ctls)
+        if needs_padding:
+            assert(len(new_ctls) < jmbConst.US_JIMAKU_CHAR_MAX)
+            self.char_data = new_ctls
+            self.char_data.append(-2)
+            while len(self.char_data) < jmbConst.US_JIMAKU_CHAR_MAX:
+                self.char_data.append(-1)
+        else:
+            assert(len(new_ctls) == jmbConst.US_JIMAKU_CHAR_MAX)
+            self.char_data = new_ctls
+
+    def read(self, fp):
+        before = fp.tell()
+        self.wait = struct.unpack('<i', fp.read(4))[0]          # s32
+        self.disp_time = struct.unpack('<i', fp.read(4))[0]     # s32
+        # 读取字符数据
+        self.char_data = list(struct.unpack(
+            f'<{jmbConst.US_JIMAKU_CHAR_MAX}h',
+            fp.read(2 * jmbConst.US_JIMAKU_CHAR_MAX)
+        ))
+        after = fp.tell()
+        assert(after - before == self.STRUCT_SIZE)
+
+    def write(self, fp):
+        before = fp.tell()
+        fp.write(struct.pack('<i', self.wait))             # s32
+        fp.write(struct.pack('<i', self.disp_time))        # s32
+
+        fp.write(struct.pack(
+            f'<{jmbConst.US_JIMAKU_CHAR_MAX}h',
+            *self.char_data
+        ))
+        after = fp.tell()
+        assert(after - before == self.STRUCT_SIZE)
+        # print("\t\t !stJimaku <-", after)
+
+    def dump(self, filename):
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        with open(filename, 'w') as fp:
+            # 写入wait
+            fp.write(f"wait = {self.wait}\n")
+            # 写入disp_time
+            fp.write(f"disp_time = {self.disp_time}\n")
+            # 写入char_data
+            char_str = " ".join(str(c) for c in jmbUtils.display_char_data(self.char_data))
+            fp.write(f"{char_str}\n")
+
+    @classmethod
+    def load(cls, filename):
+        jimaku = cls()
+        with open(filename, 'r') as fp:
+            lines = fp.readlines()
+            assert(len(lines) == 3)
+
+            # 解析wait
+            wait_line = lines[0].strip()
+            if not wait_line.startswith("wait = "):
+                raise ValueError("Invalid wait line format")
+            jimaku.wait = int(wait_line[7:])
+
+            # 解析disp_time
+            disp_line = lines[1].strip()
+            if not disp_line.startswith("disp_time = "):
+                raise ValueError("Invalid disp_time line format")
+            jimaku.disp_time = int(disp_line[12:])
+
+            # 解析char_data
+            char_line = lines[2].strip()
+            char_ctls = [int(c) for c in char_line.split()]
+            assert(len(char_ctls) == jmbConst.US_JIMAKU_CHAR_MAX)
+            jimaku.overwrite_ctl(char_ctls)
+
+    def __repr__(self):
+        char_str = ''.join([chr(c) if c > 0 else f'[{c}]' for c in self.char_data[:8]])
+        return (f"stJimaku_US(wait={self.wait}, disp_time={self.disp_time}, "
+                f"char_data='{char_str}...')")
+
+class stJimaku_JA:
     def __init__(self, fp = None):
         self.STRUCT_SIZE = 424
         self.wait = 0             # s32
@@ -234,13 +375,11 @@ class stJimaku:
         fp.write(struct.pack('<i', self.wait))             # s32
         fp.write(struct.pack('<i', self.disp_time))        # s32
 
-        # 序列化字符数据
         fp.write(struct.pack(
             f'<{jmbConst.JIMAKU_CHAR_MAX}h',
             *self.char_data
         ))
 
-        # 序列化注音数据
         for rubi in self.rubi_data:
             rubi.write(fp)
 
@@ -301,7 +440,7 @@ class stOneSentence:
     def __init__(self, fp = None):
         self.STRUCT_SIZE = 6860
         self.info : stInfo = stInfo()               # stInfo对象 (76)
-        self.jimaku_list : list[stJimaku] = []      # stJimaku对象列表（jmbConst.JIMAKU_LINE_MAX个） (16 * 424)
+        self.jimaku_list : list[stJimaku_JA] = []      # stJimaku对象列表（jmbConst.JIMAKU_LINE_MAX个） (16 * 424)
         if fp is not None:
             self.read(fp)
 
@@ -321,7 +460,7 @@ class stOneSentence:
         # 读取stJimaku列表
         self.jimaku_list = []
         for _ in range(jmbConst.JIMAKU_LINE_MAX):
-            jimaku = stJimaku(fp)
+            jimaku = stJimaku_JA(fp)
             self.jimaku_list.append(jimaku)
         assert(len(self.jimaku_list) == jmbConst.JIMAKU_LINE_MAX)
         after = fp.tell()
