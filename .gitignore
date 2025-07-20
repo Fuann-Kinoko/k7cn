@@ -1,7 +1,10 @@
 *
+!IDA_Related/
 !IDA_Related/**
 !assets/
 !assets/**
+!ripScript/
+!ripScript/**
 !.gitignore
 
 !README.md
