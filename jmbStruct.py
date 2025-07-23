@@ -731,10 +731,10 @@ class texMeta:
     def __init__(self, fp=None):
         self.STRUCT_SIZE = 72
         self.magic = b'\x00'*4
-        self.idk = b'\x00'*4    #TODO: idk what it means
-        self.w = 0              # u16, 2 bytes
-        self.h = 0              # u16, 2 bytes
-        self.dds_size = 0       # u32, 4 bytes
+        self.encoding = b'\x00'*4   # 4 bytes, 0,1,2,... = I4/I8/IA4/IA8/RGB565/RGB5A3/RGBA8(32?)/...
+        self.w = 0                  # u16, 2 bytes
+        self.h = 0                  # u16, 2 bytes
+        self.dds_size = 0           # u32, 4 bytes
         if fp is not None:
             self.read(fp)
 
@@ -743,11 +743,7 @@ class texMeta:
         self.magic = fp.read(4)
         assert self.magic == b'GCT0' or self.magic == b'\x00'*4, f"Assertion Failed. read {self.magic}, expect: 'GCT0'/'0000'"
 
-        self.idk = fp.read(4)
-        # if self.magic == b'GCT0':
-        #     assert (self.idk == b'\x00'*4 or self.idk == b'\x06\x00\x00\x00'), f"Assertion Failed. read {self.idk.hex(' ')}, expect: 00/06 00 00 00"
-        # else:
-        #     assert(self.idk == b'\x06\x00\x00\x00')
+        self.encoding = struct.unpack('<I', fp.read(4))[0]
 
         self.w = struct.unpack('<H', fp.read(2))[0]
         self.h = struct.unpack('<H', fp.read(2))[0]
@@ -762,7 +758,7 @@ class texMeta:
     def write(self, fp):
         before = fp.tell()
         fp.write(self.magic)
-        fp.write(self.idk)
+        fp.write(struct.pack('<I', self.encoding))
         fp.write(struct.pack('<H', self.w))
         fp.write(struct.pack('<H', self.h))
         fp.write(b'\x00'*4)
@@ -780,7 +776,7 @@ class texMeta:
         NotImplemented
 
     def __repr__(self):
-        return (f"texMeta(magic={self.magic}, idk={self.idk}, w={self.w}, h={self.h}, dds_size={self.dds_size})")
+        return (f"texMeta(magic={self.magic}, encoding={self.encoding}, w={self.w}, h={self.h}, dds_size={self.dds_size})")
 
 class stTex:
     def __init__(self, fp=None):

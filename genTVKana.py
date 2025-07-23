@@ -133,7 +133,7 @@ def Task_CharChange_TVKANA():
     fp.close()
     dds_header = texMeta()
     dds_header.magic = b'GCT0'
-    dds_header.idk = b'\x00\x00\x00\x01'
+    dds_header.encoding = b'\x00\x00\x00\x01'
     bin_dds_img = Image(blob=dds_bytes)
     width, height = bin_dds_img.size
     bin_dds_img.close()
@@ -218,7 +218,7 @@ def Task_Menu_TVKANA():
     fp.close()
     dds_header = texMeta()
     dds_header.magic = b'GCT0'
-    dds_header.idk = b'\x00\x00\x00\x01'
+    dds_header.encoding = b'\x00\x00\x00\x01'
     bin_dds_img = Image(blob=dds_bytes)
     width, height = bin_dds_img.size
     bin_dds_img.close()
