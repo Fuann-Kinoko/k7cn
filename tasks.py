@@ -326,6 +326,21 @@ def TaskTranslation(self:JMBBaseTask):
     self.jmb.fParams = fontTool.genFParams(unique_chars, usage, original_alignment=False)
     self.jmb.update_sentence_ctl(translation, char2ctl_lookup, validation_mode=False)
 
+@basicTask
+def TaskFixMovieOffset(self:JMBBaseTask):
+    """
+    修正错误的字幕时间
+    """
+    prefix = self.context.get('jmb_output_prefix', "")
+    if prefix != "Movie/":
+        return
+    print("\n==== Fix Movie Offset ====")
+
+    for oneSentence in self.jmb.sentences:
+        for jmk in oneSentence.jimaku_list:
+            jmk.wait += 5760 # + 1.2s
+
+
 
 
 def run_tasks(input_path:str, tasks:list[type], **task_args):
@@ -372,7 +387,6 @@ def run_tasks(input_path:str, tasks:list[type], **task_args):
         **task_args
     })
 
-
     raw_text_path = "assets/raw_text/" + task_args.get('jmb_output_prefix', "") + jmb_name + ".json"
     if os.path.exists(raw_text_path):
         f = open(raw_text_path, 'r', encoding='utf-8')
@@ -410,11 +424,11 @@ if __name__ == '__main__':
 
     lister = k7FileList.FileLister()
     # files = lister.getCharaGeki(JmkKind.JA)     # 全部章节
-    # files = lister.getCharaGeki(JmkKind.JA)[1]  # 只包含第01章: Sunset
-    files = lister.getZan(JmkKind.JA)[1]
+    # files = lister.getZan(JmkKind.JA)[1]
+    files = lister.getMovie(JmkKind.JA)[1]  # 只包含第01章: Sunset
 
     files = lister.flatten_list(files)
-    files = lister.filter(files, {"0121000J", "0121020J", "0121110J"})
+    # files = lister.filter(files, {"0121000J", "0121020J", "0121110J"})
     # files = lister.filter(files, {"nmJ"})
     pprint(files, indent=2, width=80, depth=None, compact=True)
 
@@ -441,7 +455,9 @@ if __name__ == '__main__':
 
     custom = [
         TaskValidation,
-        TaskPrintFParams,
+        # TaskPrintFParams,
+        TaskFixMovieOffset,
+        TaskSave
         # TaskFlushFParams,
         # TaskWrapper(TaskUpdateTex, import_from_file = False),
         # TaskWrapper(TaskDumpDDSTex, dump_path="DDS_mod.dds"),
@@ -456,10 +472,10 @@ if __name__ == '__main__':
             input_path = file,
 
             # NOTE: switch between these sets or create your own stuff
-            tasks = tasks_preview_content,
+            # tasks = tasks_preview_content,
             # tasks = tasks_test_translation,
             # tasks = tasks_save_translation,
-            # tasks = custom,
+            tasks = custom,
         )
 
     # All avaliable tasks:
