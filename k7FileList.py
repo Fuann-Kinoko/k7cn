@@ -357,27 +357,27 @@ class FileLister:
 
         self._Movie_00_Angel_JA = []
         self._Movie_01_Sunset_JA = [
-            "D:/SteamLibrary/steamapps/common/killer7/Movie/01010101/01010101.jmb",
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Movie/01010101/01010101.jmb",
         ]
         self._Movie_02_Cloudman_JA = [
-            "D:/SteamLibrary/steamapps/common/killer7/Movie/clemence/clemence.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/Movie/cloudman/cloudman.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/Movie/drugstore/drugstore.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/Movie/gurad/gurad.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/Movie/postman/postman.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/Movie/tractor/tractor.jmb",
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Movie/clemence/clemence.jmb",
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Movie/cloudman/cloudman.jmb",
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Movie/drugstore/drugstore.jmb",
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Movie/gurad/gurad.jmb",
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Movie/postman/postman.jmb",
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Movie/tractor/tractor.jmb",
         ]
         self._Movie_03_Encounter_JA = []
         self._Movie_04_Alterego_JA = [
-            "D:/SteamLibrary/steamapps/common/killer7/Movie/04010101/04010101.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/Movie/04010201/04010201.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/Movie/04010203/04010203.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/Movie/04040101/04040101.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/Movie/04050101/04050101.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/Movie/04050202/04050202.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/Movie/04050301/04050301.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/Movie/04060101/04060101.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/Movie/04060902/04060902.jmb",
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Movie/04010101/04010101.jmb",
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Movie/04010201/04010201.jmb",
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Movie/04010203/04010203.jmb",
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Movie/04040101/04040101.jmb",
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Movie/04050101/04050101.jmb",
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Movie/04050202/04050202.jmb",
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Movie/04050301/04050301.jmb",
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Movie/04060101/04060101.jmb",
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Movie/04060902/04060902.jmb",
         ]
         self._Movie_05_Smile_JA = []
         self._Movie_06_Lion_JA = [
