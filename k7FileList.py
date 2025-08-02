@@ -83,12 +83,12 @@ class FileLister:
             "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/05090702/05090702/05090702J.jmb",
             "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/05090802/05090802/05090802J.jmb",
             "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/05090803/05090803/05090803J.jmb",
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/05500101/05500101/05500101J.jmb",
         ]
         self._CharaGeki_06_Lion_JA = [
-            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/05100103/05100103/05100103J.jmb",
-            # "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/05100105/05100105/05100105J.jmb", # FIXME: 只有一句welcome
-            # "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/05120101/05120101/05120101J.jmb", # FIXME: 空的
-            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/05500101/05500101/05500101J.jmb",
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/05100103/05100103/05100103J.jmb", # NOTE: MATSUOKA
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/05120101/05120101/05120101J.jmb", # NOTE: SHANGHAI
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/05100105/05100105/05100105J.jmb", # NOTE: MATSUOKA LIVE 只有一句welcome
         ]
 
         self._Zan_00_Angel_JA = [
@@ -598,19 +598,24 @@ class FileLister:
             "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/tutorial/panelTutorialJ/tutorial_logJ.jmb",
         ]
 
-        self._CharaGeki_US = [
-            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/00010101/00010101/00010101.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/00020103/00020103/00020103.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/00020301/00020301/00020301.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/00020707/00020707/00020707.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/00020709/00020709/00020709.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/00020711/00020711/00020711.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/01020203/01020203/01020203.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/01030101/01030101/01030101.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/01050102/01050102/01050102.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/01060101/01060101/01060101.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/01070202/01070202/01070202.jmb",
-            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/02010101/02010101/02010101.jmb",
+        self._Texture_02_Cloudman_JA = [
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Texture/panel/020301J/q1J.BIN"
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Texture/panel/020301J/q2J.BIN"
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Texture/panel/020301J/q3J.BIN"
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Texture/panel/020301J/q4J.BIN"
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Texture/panel/020301J/q5J.BIN"
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Texture/panel/020301J/q6J.BIN"
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Texture/panel/020301J/q7J.BIN"
+        ]
+        self._Texture_05_Smile_JA = [
+            # "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Texture/panel/055500J/keyboardJ.sti" # FIXME: 用其他方法完成sti的修改
+        ]
+        self._Texture_06_Lion_JA = [
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Texture/panel/057500J/kaJ.BIN"
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Texture/panel/057500J/ruJ.BIN"
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Texture/panel/057500J/satsuJ.BIN"
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Texture/panel/057500J/seiJ.BIN"
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/Texture/panel/057500J/suJ.BIN"
         ]
 
         # Combined lists for easy access
@@ -681,13 +686,19 @@ class FileLister:
             "Movie" : self._Movie_JA
         }
 
+    @staticmethod
+    def convert_JA_to_US(lists:list[list[str]], is_movie: bool = False):
+        if is_movie:
+            return [[s.replace(".jmb", "E.jmb") for s in l] for l in lists]
+        else:
+            return [[s.replace("J.jmb", ".jmb") for s in l] for l in lists]
+
     def getCharaGeki(self, la: JmkKind) -> list[list[str]]:
         match la:
             case JmkKind.JA:
                 return self._CharaGeki_JA
             case JmkKind.US:
-                assert False, "no impl"
-                # return self._CharaGeki_US
+                return self.convert_JA_to_US(self._CharaGeki_JA)
             case _:
                 assert False, "unreachable"
 
@@ -696,7 +707,7 @@ class FileLister:
             case JmkKind.JA:
                 return self._Zan_JA
             case JmkKind.US:
-                assert False, "no impl"
+                return self.convert_JA_to_US(self._Zan_JA)
             case _:
                 assert False, "unreachable"
 
@@ -705,7 +716,7 @@ class FileLister:
             case JmkKind.JA:
                 return self._Hato_JA
             case JmkKind.US:
-                assert False, "no impl"
+                return self.convert_JA_to_US(self._Hato_JA)
             case _:
                 assert False, "unreachable"
 
@@ -714,7 +725,7 @@ class FileLister:
             case JmkKind.JA:
                 return self._Panel_JA
             case JmkKind.US:
-                assert False, "no impl"
+                return self.convert_JA_to_US(self._Panel_JA)
             case _:
                 assert False, "unreachable"
 
@@ -723,7 +734,7 @@ class FileLister:
             case JmkKind.JA:
                 return self._Stage_JA
             case JmkKind.US:
-                assert False, "no impl"
+                return self.convert_JA_to_US(self._Stage_JA)
             case _:
                 assert False, "unreachable"
 
@@ -732,7 +743,7 @@ class FileLister:
             case JmkKind.JA:
                 return self._Movie_JA
             case JmkKind.US:
-                assert False, "no impl"
+                return self.convert_JA_to_US(self._Movie_JA, is_movie=True)
             case _:
                 assert False, "unreachable"
 
@@ -741,7 +752,7 @@ class FileLister:
             case JmkKind.JA:
                 return self._Voice_JA
             case JmkKind.US:
-                assert False, "no impl"
+                return self.convert_JA_to_US(self._Voice_JA)
             case _:
                 assert False, "unreachable"
 

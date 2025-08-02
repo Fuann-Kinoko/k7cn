@@ -417,7 +417,7 @@ def run_tasks(input_path:str, tasks:list[type], **task_args):
     runner = unittest.TextTestRunner(failfast=True)
     runner.run(suite)
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-y', '--yes', action='store_true', help='skip the confirmation of file list')
     args = parser.parse_args()
@@ -425,11 +425,13 @@ if __name__ == '__main__':
     lister = k7FileList.FileLister()
     # files = lister.getCharaGeki(JmkKind.JA)     # 全部章节
     # files = lister.getZan(JmkKind.JA)[1]
-    files = lister.getMovie(JmkKind.JA)[1]  # 只包含第01章: Sunset
+    files = lister.getStage(JmkKind.JA)
 
     files = lister.flatten_list(files)
     # files = lister.filter(files, {"0121000J", "0121020J", "0121110J"})
     # files = lister.filter(files, {"nmJ"})
+    # files = lister.filter(files, {"04050301"})
+    # files = lister.filter(files, {"Stage209_M00"})
     pprint(files, indent=2, width=80, depth=None, compact=True)
 
     tasks_preview_content = [
@@ -474,8 +476,8 @@ if __name__ == '__main__':
             # NOTE: switch between these sets or create your own stuff
             # tasks = tasks_preview_content,
             # tasks = tasks_test_translation,
-            # tasks = tasks_save_translation,
-            tasks = custom,
+            tasks = tasks_save_translation,
+            # tasks = custom,
         )
 
     # All avaliable tasks:
@@ -504,3 +506,6 @@ if __name__ == '__main__':
     #     TaskSave,                   # write to `JMBS/{jmb_file}` as default
     #     # TaskWrapper(TaskSave, output_path="testmod.jmb"),
     # ]
+
+if __name__ == '__main__':
+    main()

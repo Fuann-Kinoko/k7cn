@@ -743,7 +743,7 @@ class texMeta:
         self.magic = fp.read(4)
         assert self.magic == b'GCT0' or self.magic == b'\x00'*4, f"Assertion Failed. read {self.magic}, expect: 'GCT0'/'0000'"
 
-        self.encoding = struct.unpack('<I', fp.read(4))[0]
+        self.encoding = fp.read(4)
 
         self.w = struct.unpack('<H', fp.read(2))[0]
         self.h = struct.unpack('<H', fp.read(2))[0]
@@ -758,7 +758,7 @@ class texMeta:
     def write(self, fp):
         before = fp.tell()
         fp.write(self.magic)
-        fp.write(struct.pack('<I', self.encoding))
+        fp.write(self.encoding)
         fp.write(struct.pack('<H', self.w))
         fp.write(struct.pack('<H', self.h))
         fp.write(b'\x00'*4)
