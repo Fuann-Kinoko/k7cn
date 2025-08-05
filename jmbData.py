@@ -1,3 +1,4 @@
+from typing import TypeGuard
 from jmbStruct import *
 from jmbNumeric import S16_BE
 import jmbConst
@@ -93,10 +94,10 @@ class BaseGdat(ABC):
 
 class gDat_US(BaseGdat):
     def __init__(self, fp = None):
-        self.meta : MetaData_US = None
-        self.sentences : list[stJimaku_US] = None
-        self.fParams : list[stFontParam] = None
-        self.tex : stTex = None
+        self.meta : MetaData_US
+        self.sentences : list[stJimaku_US]
+        self.fParams : list[stFontParam]
+        self.tex : stTex
 
         super().__init__(fp)
 
@@ -224,16 +225,16 @@ class gDat_US(BaseGdat):
                 self.sentences[i].overwrite_ctl(local_ctls)
 
     def flush_fparams(self):
-        NotImplemented
+        raise NotImplementedError
         assert len(self.fParams) > 0
 
 class gDat_JA(BaseGdat):
     def __init__(self, fp = None):
-        self.meta : MetaData_JA = None
-        self.sentences : list[stOneSentence] = None
-        self.fParams : list[stFontParam] = None
-        self.tex : stTex = None
-        self.motions : list[bytes] = None
+        self.meta : MetaData_JA
+        self.sentences : list[stOneSentence]
+        self.fParams : list[stFontParam]
+        self.tex : stTex
+        self.motions : list[bytes]
 
         self.end_by_tex : bool = False
         super().__init__(fp)
@@ -427,3 +428,5 @@ class gDat_JA(BaseGdat):
             cur_u += param.w
 
 gDat = Union[gDat_JA, gDat_US]
+def _TYPE_is_JA(obj: gDat) -> TypeGuard[gDat_JA]:
+    return isinstance(obj, gDat_JA)

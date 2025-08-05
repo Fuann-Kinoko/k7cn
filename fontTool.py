@@ -1,5 +1,6 @@
 from enum import Enum, auto
 import os
+from typing import cast
 from jmbConst import JmkUsage
 from jmbStruct import stFontParam, stJimaku
 from jmbNumeric import S16_BE
@@ -14,6 +15,7 @@ from wand.drawing import Drawing
 Font_SourceHan = "SourceHanSerifCN-Bold.otf"
 Font_HiraginoMincho = "HiraginoMinCho-W6.ttc"
 Font_DanYaMingTi = "DanYaMingTiA.ttf"
+Font_HiraginoSans = "Hiragino-Sans-GB-W6.ttf"
 
 SATSU_FLAG      = S16_BE("8000")
 SHI_FLAG        = S16_BE("7000")
@@ -24,11 +26,13 @@ BODY_FACE_SCALE_SIZE = 57
 HATO_FACE_SCALE_SIZE = 44
 NAME_FACE_SCALE_SIZE = 34
 TUTORIAL_FACE_SCALE_SIZE = 21
+VOICE_FACE_SCALE_SIZE = 30
 
 BODY_WIDTH_SCALE_SIZE = 35
 HATO_WIDTH_SCALE_SIZE = 30
 NAME_WIDTH_SCALE_SIZE = 28
 TUTORIAL_WIDTH_SCALE_SIZE = 17
+VOICE_WIDTH_SCALE_SIZE = 22
 
 DEFAULT_FACE_SIZE = 142         # scale = 7.5
 KATA_FACE_SIZE    = 112         # scale = 6
@@ -77,6 +81,8 @@ def get_face_scale_factor(usage: JmkUsage) -> float:
             return HATO_FACE_SCALE_SIZE / BODY_FACE_SCALE_SIZE
         case JmkUsage.Tutorial:
             return TUTORIAL_FACE_SCALE_SIZE / BODY_FACE_SCALE_SIZE
+        case JmkUsage.Voice:
+            return VOICE_FACE_SCALE_SIZE / BODY_FACE_SCALE_SIZE
         case JmkUsage.Default:
             return 1.0
         case _:
@@ -90,6 +96,8 @@ def get_width_scale_factor(usage: JmkUsage) -> float:
             return HATO_WIDTH_SCALE_SIZE / BODY_WIDTH_SCALE_SIZE
         case JmkUsage.Tutorial:
             return TUTORIAL_WIDTH_SCALE_SIZE / BODY_WIDTH_SCALE_SIZE
+        case JmkUsage.Voice:
+            return VOICE_WIDTH_SCALE_SIZE / BODY_WIDTH_SCALE_SIZE
         case JmkUsage.Default:
             return 1.0
         case _:
@@ -107,6 +115,10 @@ class FontKind(Enum):
 
     def get_face_size(self, usage: JmkUsage) -> int:
         scale = get_face_scale_factor(usage)
+        if usage == JmkUsage.Voice and self != FontKind.NUM and self != FontKind.ALPHA:
+            scale *= 1.2
+        if usage == JmkUsage.Tutorial:
+            scale *= 1.2
         match self:
             case FontKind.KANA:
                 return int(scale * KANA_FACE_SIZE)
@@ -127,7 +139,7 @@ class FontKind(Enum):
             case _:
                 assert False, "unreachable"
 
-    def get_width(self, usage: JmkUsage, alpha_ch: str = None) -> int:
+    def get_width(self, usage: JmkUsage, alpha_ch: str|None = None) -> int:
         scale = get_width_scale_factor(usage)
         match self:
             case FontKind.KANA:
@@ -151,14 +163,14 @@ class FontKind(Enum):
             case FontKind.PUNCT:
                 return int(scale * PUNCT_WIDTH)
             case _:
-                NotImplemented
+                raise NotImplementedError
 
-    def get_height(self, usage: JmkUsage, alpha_ch: str = None) -> int:
+    def get_height(self, usage: JmkUsage, alpha_ch: str|None = None) -> int:
         scale = get_face_scale_factor(usage)
         return int(scale * DEFAULT_HEIGHT)
 
 
-def check_kind(char: str) -> FontKind:
+def check_kind(char: str, usage: JmkUsage) -> FontKind:
     if len(char) != 1:
         raise ValueError("Input must be a single character")
     code = ord(char)
@@ -181,7 +193,7 @@ def check_kind(char: str) -> FontKind:
     elif (char not in {"ー", "―", "‐"}) and (0x30A0 <= code <= 0x30FF):
         return FontKind.KATA
     # 特殊字符（如「殺」「死」）
-    elif char == "殺" or char == "死":
+    elif (char == "殺" or char == "死") and usage != JmkUsage.Voice:
         return FontKind.SPECIAL
     # 默认认为是汉字
     else:
@@ -238,9 +250,9 @@ def register(input: str) -> tuple[dict[int, str], dict[str, int], str]:
     return ctl2char_dict, char2ctl_dict, unique_jmk
 
 
-def gen_char_image(char: str, usage: JmkUsage, info: stFontParam = None) -> Image:
+def gen_char_image(char: str, usage: JmkUsage, info: stFontParam|None = None) -> Image:
     assert(len(char) == 1)
-    kind = check_kind(char)
+    kind = check_kind(char, usage)
     if info is not None:
         img = Image(width=info.w*4, height=info.h*4, background=Color('transparent'))
     else:
@@ -248,16 +260,26 @@ def gen_char_image(char: str, usage: JmkUsage, info: stFontParam = None) -> Imag
 
 
     if kind == FontKind.QUOTE:
-        if char == "“":
-            img = Image(filename="assets/chars/JA_quote_open.png")
-        elif char == "”":
-            img = Image(filename="assets/chars/JA_quote_close.png")
-        else:
-            assert False, "Unreachable"
+        if usage == JmkUsage.Default:
+            if char == "“":
+                img = Image(filename="assets/chars/JA_quote_open.png")
+            elif char == "”":
+                img = Image(filename="assets/chars/JA_quote_close.png")
+            else:
+                assert False, "Unreachable"
+        elif usage == JmkUsage.Voice:
+            if char == "“":
+                img = Image(filename="assets/chars/JA_quote_Voice_open.png")
+            elif char == "”":
+                img = Image(filename="assets/chars/JA_quote_Voice_close.png")
+            else:
+                assert False, "Unreachable"
         return img
 
     if usage == JmkUsage.Hato:
         font_path = Font_DanYaMingTi
+    elif usage == JmkUsage.Voice:
+        font_path = Font_HiraginoSans
     else:
         if kind == FontKind.KANJI and char != "？":
             font_path = Font_SourceHan
@@ -282,6 +304,12 @@ def gen_char_image(char: str, usage: JmkUsage, info: stFontParam = None) -> Imag
             case _: # TODO: add support for hato
                 OFFSET = -16
         img.roll(y=OFFSET)
+    elif font_path is Font_HiraginoMincho:
+        if usage == JmkUsage.Tutorial and kind == FontKind.ALPHA:
+            OFFSET = -8
+        else:
+            OFFSET = 0
+        img.roll(y=OFFSET)
 
     return img
 
@@ -290,9 +318,9 @@ def save_preview_jimaku(
         jimaku: stJimaku,
         usage: JmkUsage,
 
-        ctl2char_lookup: dict[int, str] = None,
-        fParams: list[stFontParam] = None,
-        provided_chars_dir : str = None,
+        ctl2char_lookup: dict[int, str]|None = None,
+        fParams: list[stFontParam]|None = None,
+        provided_chars_dir : str|None = None,
         original_alignment = True
     ):
     """Generates and saves a preview image of subtitle text (jimaku) using either character generation
@@ -326,6 +354,8 @@ def save_preview_jimaku(
             HEIGHT = HATO_FACE_SCALE_SIZE
         case JmkUsage.Tutorial:
             HEIGHT = TUTORIAL_FACE_SCALE_SIZE
+        case JmkUsage.Voice:
+            HEIGHT = VOICE_FACE_SCALE_SIZE
         case _:
             HEIGHT = DEFAULT_HEIGHT
 
@@ -341,6 +371,7 @@ def save_preview_jimaku(
     current_x = 0
     for i, ctl in enumerate(char_data):
         if should_gen_char:
+            ctl2char_lookup = cast(dict[int, str], ctl2char_lookup)
             ctl_s16 = S16_BE(ctl)
             if ctl not in ctl2char_lookup:
                 if (ctl_s16 & S16_BE("ff00")) == S16_BE("ff00"):
@@ -351,7 +382,7 @@ def save_preview_jimaku(
                     assert False, "Fix that error"
             else:
                 char = ctl2char_lookup[ctl]
-                kind = check_kind(char)
+                kind = check_kind(char, usage)
                 char_info = stFontParam(u=0,v=0,w=kind.get_width(usage, alpha_ch=char),h=kind.get_height(usage, alpha_ch=char))
                 char_img = gen_char_image(char, usage, char_info)
                 step = kind.get_width(usage, alpha_ch=char)
@@ -359,6 +390,7 @@ def save_preview_jimaku(
                     step += 1
             # print(f"\tctl = {ctl}; char = {char}; Kind = {kind};\tparams = {char_info}")
         else:
+            fParams = cast(list[stFontParam], fParams)
             ctl_s16 = S16_BE(ctl)
             if ctl_s16 == SPACE_H_FLAG:
                 char_img = gen_char_image(" ", usage)
@@ -389,12 +421,13 @@ def save_preview_jimaku(
     if should_gen_char:
         canvas.crop(0, 0, width=current_x + 16, height=HEIGHT*4)
     else:
+        fParams = cast(list[stFontParam], fParams)
         canvas.crop(0, 0, width=current_x + 16, height=fParams[0].h*4)
     canvas.format='png'
     canvas.save(filename=save_path)
     canvas.close()
 
-def save_char_image(save_path: str, char: str, usage: JmkUsage, info: stFontParam = None):
+def save_char_image(save_path: str, char: str, usage: JmkUsage, info: stFontParam|None = None):
     img = gen_char_image(char, usage, info)
     img.save(filename=save_path)
     img.close()
@@ -413,10 +446,11 @@ def genFParams(
     Args:
         unique_chars (str): String containing unique characters to be laid out in the atlas
         usage (JmkUsage): uses corresponding font metrics.
-            1. Nameplate  (34px height).
-            2. Hato(Mail) (44px height).
+            1. Nameplate  (34px height)
+            2. Hato(Mail) (44px height)
             3. Default    (57px height)
             4. Tutorial   (21px height)
+            5. Voice      (30px height)
         max_width (int, optional): Maximum width of the virtual texture in pixels.
             Characters will wrap to new line when exceeding this width. Defaults to 512.
         original_alignment (bool, optional): If True, adds 1px spacing to certain character types
@@ -443,13 +477,15 @@ def genFParams(
             HEIGHT = HATO_FACE_SCALE_SIZE
         case JmkUsage.Tutorial:
             HEIGHT = TUTORIAL_FACE_SCALE_SIZE
+        case JmkUsage.Voice:
+            HEIGHT = VOICE_FACE_SCALE_SIZE
         case _:
             HEIGHT = BODY_FACE_SCALE_SIZE
     u = 0
     v = 0
     row_count = 0
     for char in unique_chars:
-        kind = check_kind(char)
+        kind = check_kind(char, usage)
         w = kind.get_width(usage, alpha_ch=char)
         h = kind.get_height(usage, alpha_ch=char)
         step = w

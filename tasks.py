@@ -1,10 +1,11 @@
+from typing import Any, Callable, Self, Type, TypeVar, cast
 import k7FileList
 import fontTool
 import DDSTool
 import jmbUtils
 import jmbConst
 from jmbConst import JmkKind
-from jmbData import BaseGdat, gDat, gDat_JA
+from jmbData import _TYPE_is_JA, BaseGdat, gDat, gDat_JA, gDat_US
 
 import argparse
 import json
@@ -30,13 +31,14 @@ class JMBBaseTask(TestCase):
     def execute(self):
         raise NotImplementedError("Subclasses must implement execute()")
 
+T = TypeVar('T', bound=JMBBaseTask)
 class TaskWrapper:
-    def __init__(self, task_cls, **params):
+    def __init__(self, task_cls: Type[T], **params):
         self.task_cls = task_cls
         self.params = params
 
 class JMBTestLoader(unittest.TestLoader):
-    def __init__(self, jmb : gDat = None, shared_context: dict = None):
+    def __init__(self, jmb:gDat, shared_context: dict):
         super().__init__()
         self.jmb = jmb
         self.shared_context = shared_context or {}
@@ -47,22 +49,22 @@ class JMBTestLoader(unittest.TestLoader):
             task_cls.set_context(self.jmb, self.shared_context)
             test_case = task_cls()
             test_case.params = task_wrapper.params
-            return test_case
+            return self.suiteClass([test_case])
         else:
-            self.loadTestsFromTestCase(task_cls)
+            return self.loadTestsFromTestCase(task_cls)
 
     def loadTestsFromTestCase(self, testCaseClass):
         if issubclass(testCaseClass, JMBBaseTask):
             testCaseClass.set_context(self.jmb, self.shared_context)
         return super().loadTestsFromTestCase(testCaseClass)
 
-def basicTask(func):
+def basicTask(func: Callable[[T], Any]) -> Type[T]:
     class Task(JMBBaseTask):
-        def execute(self):
-            return func(self)
+        def execute(self: Self) -> None:
+            return func(cast(T, self))
     Task.__name__ = func.__name__
     Task.__doc__ = func.__doc__
-    return Task
+    return cast(Type[T], Task)
 
 def check_raw_text_prepared(ctx: dict):
     ready = True
@@ -112,7 +114,7 @@ def TaskUpdateTex(self:JMBBaseTask):
     if not import_from_file:
         check_raw_text_prepared(self.context)
     dds_path: str = self.params.get('import_path', 'gen.dds')
-    unique_chars = self.context.get('unique_chars')
+    unique_chars: str = self.context.get('unique_chars', "")
     usage = self.context.get('jmb_usage', 0)
     print("\n==== Generate DDS Tex Based on used chars ====")
 
@@ -147,13 +149,13 @@ def TaskGeneratePreview(self:JMBBaseTask):
     usage = self.context.get('jmb_usage', 0)
     if not depends_on_dds_extraction:
         check_raw_text_prepared(self.context)
-    print("\n==== Generating Previews ====")
+    print(f"\n==== Generating Previews ({usage}) ====")
 
     assert(self.jmb.meta.sentence_num == len(self.jmb.sentences))
     for i in range(self.jmb.meta.sentence_num):
-        sent = self.jmb.sentences[i]
         print(f"generating preview for sentence {i}")
-        if isinstance(self.jmb, gDat_JA):
+        if _TYPE_is_JA(self.jmb):
+            sent = self.jmb.sentences[i]
             for jmk_idx, jmk in enumerate(sent.jimaku_list):
                 if not jmk.valid():
                     print(f"\thas {jmk_idx} valid jimakus")
@@ -167,6 +169,8 @@ def TaskGeneratePreview(self:JMBBaseTask):
                 else:
                     fontTool.save_preview_jimaku(target_path+".png", jmk, usage, ctl2char_lookup, original_alignment=False)
         else:
+            self.jmb = cast(gDat_US, self.jmb)
+            sent = self.jmb.sentences[i]
             if not sent.valid():
                 break
             target_path = f"{preview_dir}/US_sent{i}"
@@ -256,8 +260,9 @@ def TaskPrintFParams(self:JMBBaseTask):
         None
     """
     print("\n==== Printing FParams ====")
-    for param in self.jmb.fParams:
-        print(param)
+    print(f"fParams total: {len(self.jmb.fParams)}")
+    for i, param in enumerate(self.jmb.fParams):
+        print(f"[{i}] {param}")
 
 @basicTask
 def TaskPrintDDSInfo(self:JMBBaseTask):
@@ -298,13 +303,18 @@ def TaskTranslation(self:JMBBaseTask):
     """
     修改一部分文字
     """
+    # TODO: add support for US version
+    if not isinstance(self.jmb, gDat_JA):
+        raise NotImplementedError("US Version is not supported yet")
+    self.jmb = cast(gDat_JA, self.jmb)
+
     translation_dir = "assets/translation/" + self.context.get('jmb_output_prefix', "")
     default_path = translation_dir + self.context['jmb_name'] + ".json"
     translation_filepath = self.context.get('translation', default_path)
     usage = self.context.get('jmb_usage', 0)
-    assert(os.path.exists(translation_filepath))
+    assert os.path.exists(translation_filepath), f"{translation_filepath} doesn't exist"
     f = open(translation_filepath, 'r', encoding='utf-8')
-    translation = json.load(f)
+    translation:list[list[str]] = json.load(f)
     f.close()
     print("\n==== Modifying Translation ====")
 
@@ -325,12 +335,17 @@ def TaskTranslation(self:JMBBaseTask):
 
     self.jmb.fParams = fontTool.genFParams(unique_chars, usage, original_alignment=False)
     self.jmb.update_sentence_ctl(translation, char2ctl_lookup, validation_mode=False)
+    self.jmb.recalculate_meta()
 
 @basicTask
 def TaskFixMovieOffset(self:JMBBaseTask):
     """
     修正错误的字幕时间
     """
+    if not isinstance(self.jmb, gDat_JA):
+        raise ValueError("US Version doesn't have incorrect movie offset")
+    self.jmb = cast(gDat_JA, self.jmb)
+
     prefix = self.context.get('jmb_output_prefix', "")
     if prefix != "Movie/":
         return
@@ -339,9 +354,6 @@ def TaskFixMovieOffset(self:JMBBaseTask):
     for oneSentence in self.jmb.sentences:
         for jmk in oneSentence.jimaku_list:
             jmk.wait += 5760 # + 1.2s
-
-
-
 
 def run_tasks(input_path:str, tasks:list[type], **task_args):
     task_args['original_path'] = input_path
@@ -360,6 +372,9 @@ def run_tasks(input_path:str, tasks:list[type], **task_args):
     if 'tutorial' in jmb_name:
         assert usage == jmbConst.JmkUsage.Default
         usage = jmbConst.JmkUsage.Tutorial
+    if 'voice' in jmb_name:
+        assert usage == jmbConst.JmkUsage.Default
+        usage = jmbConst.JmkUsage.Voice
     task_args['jmb_usage'] = usage
 
     if 'Zan' in input_path:
@@ -368,6 +383,8 @@ def run_tasks(input_path:str, tasks:list[type], **task_args):
         task_args['jmb_output_prefix'] = 'hato/'
     if 'tutorial' in jmb_name:
         task_args['jmb_output_prefix'] = 'Tutorial/'
+    if 'voice' in jmb_name:
+        task_args['jmb_output_prefix'] = 'Voice/'
     if 'Movie' in input_path:
         task_args['jmb_output_prefix'] = 'Movie/'
     if 'fonts' in input_path and 'P' in jmb_name:
@@ -425,18 +442,26 @@ def main():
     lister = k7FileList.FileLister()
     # files = lister.getCharaGeki(JmkKind.JA)     # 全部章节
     # files = lister.getZan(JmkKind.JA)[1]
-    files = lister.getStage(JmkKind.JA)
+    files = lister.getZan(JmkKind.JA)[7]
+    # files = lister.getVoice(JmkKind.JA)
 
     files = lister.flatten_list(files)
+    files.extend(lister.flatten_list(lister.getVoice(JmkKind.JA)))
     # files = lister.filter(files, {"0121000J", "0121020J", "0121110J"})
     # files = lister.filter(files, {"nmJ"})
     # files = lister.filter(files, {"04050301"})
     # files = lister.filter(files, {"Stage209_M00"})
+    # files = lister.filter(files, {"voice01J"})
+    # files = lister.filter(files, {"Stage_tutorialJ"})
+    # voice_mult_lang_func = files[0].replace('01J.jmb', '01{}.jmb')
+    # files.extend([voice_mult_lang_func.format(suffix) for suffix in ['', 'E', 'F', 'G']])
+
     pprint(files, indent=2, width=80, depth=None, compact=True)
 
     tasks_preview_content = [
-        # TaskPrintMetaData,
-        TaskValidation,
+        TaskPrintMetaData,
+        TaskPrintFParams,
+        # TaskValidation,
         TaskWrapper(TaskExtractChars, extracted_dir="dds_font"),
         TaskWrapper(TaskDumpDDSTex, dump_path="DDS_ori.dds"),
         TaskWrapper(TaskGeneratePreview, seperate_by_jmbname=True, preview_dir="jmks", extracted_chars_dir = "dds_font"),
@@ -450,21 +475,26 @@ def main():
     tasks_save_translation = [
         TaskValidation,
         TaskTranslation,
+        # TaskPrintMetaData,
+        # TaskPrintFParams,
         TaskWrapper(TaskUpdateTex, import_from_file = False),
-        # TaskWrapper(TaskGeneratePreview, seperate_by_jmbname=True, preview_dir="jmks"),
+        # TaskWrapper(TaskExtractChars, extracted_dir="modded_dds_font"),
+        # TaskWrapper(TaskGeneratePreview, seperate_by_jmbname=True, preview_dir="jmks", extracted_chars_dir = "modded_dds_font"),
         TaskSave
     ]
 
     custom = [
         TaskValidation,
         # TaskPrintFParams,
-        TaskFixMovieOffset,
-        TaskSave
+        # TaskFixMovieOffset,
         # TaskFlushFParams,
+        TaskTranslation,
+        TaskWrapper(TaskGeneratePreview, seperate_by_jmbname=True, preview_dir="jmks"),
         # TaskWrapper(TaskUpdateTex, import_from_file = False),
         # TaskWrapper(TaskDumpDDSTex, dump_path="DDS_mod.dds"),
         # TaskWrapper(TaskExtractChars, extracted_dir="modded_dds_font"),
         # TaskWrapper(TaskGeneratePreview, preview_dir="jmks"),
+        # TaskSave,
     ]
 
     should_run = input("Ensure the file lists are correct before running (y/N) ")

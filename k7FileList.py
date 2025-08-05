@@ -1,6 +1,9 @@
 import itertools
-from typing import Union, overload
+from typing import TypeGuard, Union, cast, overload
 from jmbConst import JmkKind
+
+def _TYPE_is_list_of_str(obj: Union[list[list[str]], list[str]]) -> TypeGuard[list[str]]:
+    return len(obj) > 0 and isinstance(obj[0], str) and isinstance(obj, list)
 
 class FileLister:
     def __init__(self):
@@ -686,8 +689,20 @@ class FileLister:
             "Movie" : self._Movie_JA
         }
 
+    @overload
     @staticmethod
-    def convert_JA_to_US(lists:list[list[str]], is_movie: bool = False):
+    def convert_JA_to_US(lists: list[list[str]], is_movie: bool = False) -> list[list[str]]: ...
+    @overload
+    @staticmethod
+    def convert_JA_to_US(lists: list[str], is_movie: bool = False) -> list[str]: ...
+    @staticmethod
+    def convert_JA_to_US(lists: list[list[str]] | list[str], is_movie: bool = False) -> list[list[str]] | list[str]:
+        if len(lists) == 0:
+            return []
+        if _TYPE_is_list_of_str(lists):
+            return [s.replace("J.jmb", ".jmb") for s in lists]
+
+        lists = cast(list[list[str]], lists)
         if is_movie:
             return [[s.replace(".jmb", "E.jmb") for s in l] for l in lists]
         else:
@@ -747,7 +762,16 @@ class FileLister:
             case _:
                 assert False, "unreachable"
 
-    def getVoice(self, la: JmkKind) -> list[list[str]]:
+    def getTutorial(self, la: JmkKind) -> list[str]:
+        match la:
+            case JmkKind.JA:
+                return self._Tutorial_JA
+            case JmkKind.US:
+                return self.convert_JA_to_US(self._Tutorial_JA)
+            case _:
+                assert False, "unreachable"
+
+    def getVoice(self, la: JmkKind) -> list[str]:
         match la:
             case JmkKind.JA:
                 return self._Voice_JA
@@ -758,19 +782,21 @@ class FileLister:
 
     @overload
     @staticmethod
-    def flatten_list(nested_list: list[list[str]]) -> list[str]: ...
+    def flatten_list(input_list: list[list[str]]) -> list[str]: ...
     @overload
     @staticmethod
-    def flatten_list(flat_list: list[str]) -> list[str]: ...
+    def flatten_list(input_list: list[str]) -> list[str]: ...
     @staticmethod
-    def flatten_list(input_list: Union[list[str], list[list[str]]]) -> list[str]:
+    def flatten_list(input_list: list[str] | list[list[str]]) -> list[str]:
         if not input_list:
             return []
-        if isinstance(input_list[0], list):
-            if not all(isinstance(item, str) for sublist in input_list for item in sublist):
-                raise TypeError("Expected list[list[str]] or list[str], got mixed types.")
-            return list(itertools.chain.from_iterable(input_list))
-        return input_list
+        if _TYPE_is_list_of_str(input_list):
+            return input_list
+
+        input_list = cast(list[list[str]], input_list)
+        if not all(isinstance(item, str) for sublist in input_list for item in sublist):
+            raise TypeError("Expected list[list[str]] or list[str], got mixed types.")
+        return list(itertools.chain.from_iterable(input_list))
 
     @staticmethod
     def filter(input_list: list[str], rule_set: set[str], reverse: bool = False) -> list[str]:

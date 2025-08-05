@@ -49,12 +49,12 @@ class MetaData_US:
         fp.write(struct.pack('<I', self.tex_offset))
 
     def dump(self, filename):
-        NotImplemented
+        raise NotImplementedError
 
     @classmethod
     def load(cls, filename):
         meta = cls()
-        NotImplemented
+        raise NotImplementedError
 
     def __repr__(self):
         return (
@@ -105,7 +105,7 @@ class MetaData_JA:
     @classmethod
     def load(cls, filename):
         meta = cls()
-        NotImplemented
+        raise NotImplementedError
 
     def __repr__(self):
         return (
@@ -162,7 +162,7 @@ class stInfo:
 
     @classmethod
     def load(cls, fp):
-        NotImplemented
+        raise NotImplementedError
 
     def __repr__(self):
         return (f"stInfo(wait={self.wait}, hps_file='{self.hps_file}', "
@@ -201,7 +201,7 @@ class stRubiDat:
         assert(after - before == self.STRUCT_SIZE)
 
     def dump(self, fp):
-        NotImplemented
+        raise NotImplementedError
 
     def clear(self):
         self.from_num = -1
@@ -452,6 +452,7 @@ class stOneSentence:
             if not jmk.valid():
                 return ret
             ret += 1
+        return ret
 
     def read(self, fp):
         before = fp.tell()
@@ -478,12 +479,12 @@ class stOneSentence:
         assert(after - before == self.STRUCT_SIZE)
 
     def dump(self, filename):
-        NotImplemented
+        raise NotImplementedError
 
     @classmethod
     def load(cls, fp):
         sentence = cls()
-        NotImplemented
+        raise NotImplementedError
 
     def __repr__(self):
         return (f"stOneSentence(\n  info={self.info},\n  "
@@ -505,7 +506,7 @@ class stFontParam:
         fp.write(struct.pack('<4H', self.u, self.v, self.w, self.h))
 
     def dump(self, fp):
-        NotImplemented
+        raise NotImplementedError
 
     @classmethod
     def load(cls, fp):
@@ -693,7 +694,7 @@ class texStrImage:
         self.strpack : list[SIStrPack] = []
         self.str : list[SIStr] = []
         self.chb : list[SIChr] = []
-        self.tex : stTex = None
+        self.tex : stTex
         if fp is not None:
             self.read(fp)
 
@@ -770,10 +771,10 @@ class texMeta:
         assert(after - before == self.STRUCT_SIZE)
 
     def dump(self, filename):
-        NotImplemented
+        raise NotImplementedError
 
     def load(self, filename):
-        NotImplemented
+        raise NotImplementedError
 
     def __repr__(self):
         return (f"texMeta(magic={self.magic}, encoding={self.encoding}, w={self.w}, h={self.h}, dds_size={self.dds_size})")
@@ -803,8 +804,7 @@ class stTex:
         return cls(fp)
 
     def __repr__(self):
-        # TODO: 更新repr
-        return (f"stTex : len(header) = {len(self.header)}, len(dds) = {len(self.dds)}")
+        return (f"stTex : header = {self.header}, len(dds) = {len(self.dds)}")
 
 
 stJimaku = Union[stJimaku_JA, stJimaku_US]

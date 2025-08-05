@@ -19,6 +19,7 @@ class JmkUsage(Enum):
     Name = auto()
     Hato = auto()
     Tutorial = auto()
+    Voice = auto()
 
 class JmkKind(Enum):
     JA = auto()

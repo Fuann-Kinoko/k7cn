@@ -36,7 +36,7 @@ def extract(output_dir : str, dds_bytes : bytes, char_infos : list[stFontParam],
             h_phys = char.h * scale_factor
             if (u_phys + w_phys > width or
                 v_phys + h_phys > height):
-                print(f"Warning: 字符{idx}超出图像边界")
+                print(f"Warning: 字符{idx}超出图像边界: {char}")
                 continue
             char_img = img.clone()
             char_img.crop(u_phys, v_phys, width=w_phys, height=h_phys)
@@ -184,7 +184,7 @@ def gen(
             Defaults to True (a replication of original behavior).
             But recommended to be False.
     """
-    tmp_kind = fontTool.check_kind(unique_chars[0])
+    tmp_kind = fontTool.check_kind(unique_chars[0], usage)
     HEIGHT = tmp_kind.get_height(usage, alpha_ch=unique_chars[0])
     del tmp_kind
 
@@ -199,7 +199,7 @@ def gen(
     col_count = 0
     current_max_width = 0
     for char in unique_chars:
-        kind = fontTool.check_kind(char)
+        kind = fontTool.check_kind(char, usage)
         w = kind.get_width(usage, alpha_ch=char)
         h = kind.get_height(usage, alpha_ch=char)
         assert(h == HEIGHT)
