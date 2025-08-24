@@ -349,6 +349,8 @@ def TaskFixMovieOffset(self:JMBBaseTask):
     prefix = self.context.get('jmb_output_prefix', "")
     if prefix != "Movie/":
         return
+    if self.context.get('jmb_name', "") != "01010101": # TODO: 我也不知道有没有其它也有问题
+        return
     print("\n==== Fix Movie Offset ====")
 
     for oneSentence in self.jmb.sentences:
@@ -440,21 +442,34 @@ def main():
     args = parser.parse_args()
 
     lister = k7FileList.FileLister()
-    # files = lister.getCharaGeki(JmkKind.JA)     # 全部章节
-    # files = lister.getZan(JmkKind.JA)[1]
-    files = lister.getZan(JmkKind.JA)[7]
+    files = lister.getCharaGeki(JmkKind.JA)     # 全部章节
+    # files = lister.getCharaGeki(JmkKind.JA)[2]
+    # files = lister.getZan(JmkKind.JA)
+    # files = lister.getMovie(JmkKind.JA)[1]
+    # files = lister.getZan(JmkKind.JA)[7]
+    # files = lister.getHato(JmkKind.JA)[1]
     # files = lister.getVoice(JmkKind.JA)
+    # files = lister.getHato(JmkKind.JA)
 
     files = lister.flatten_list(files)
+    files.extend(lister.flatten_list(lister.getHato(JmkKind.JA)))
+    files.extend(lister.flatten_list(lister.getMovie(JmkKind.JA)))
+    files.extend(lister.flatten_list(lister.getPanel(JmkKind.JA)))
+    files.extend(lister.flatten_list(lister.getStage(JmkKind.JA)))
     files.extend(lister.flatten_list(lister.getVoice(JmkKind.JA)))
+    # files.extend(lister.flatten_list(lister.getTutorial(JmkKind.JA)))
+    files.extend(lister.flatten_list(lister.getZan(JmkKind.JA)))
+    # NOTE: 我在人工做差分……
+    files = lister.filter(files, {"0100031J", "0110122J", "01030101", "01040101J"}) # NOTE: 2025/08/23晚做出的变化
+    files.extend(lister.flatten_list(lister.getHato(JmkKind.JA))) # NOTE: hato全部放上倒没问题
+    # files = lister.filter(files, {"010001J", "010002J"})
     # files = lister.filter(files, {"0121000J", "0121020J", "0121110J"})
     # files = lister.filter(files, {"nmJ"})
     # files = lister.filter(files, {"04050301"})
     # files = lister.filter(files, {"Stage209_M00"})
     # files = lister.filter(files, {"voice01J"})
+    # files = lister.filter(files, {"P020109J"})
     # files = lister.filter(files, {"Stage_tutorialJ"})
-    # voice_mult_lang_func = files[0].replace('01J.jmb', '01{}.jmb')
-    # files.extend([voice_mult_lang_func.format(suffix) for suffix in ['', 'E', 'F', 'G']])
 
     pprint(files, indent=2, width=80, depth=None, compact=True)
 
@@ -477,6 +492,7 @@ def main():
         TaskTranslation,
         # TaskPrintMetaData,
         # TaskPrintFParams,
+        TaskFixMovieOffset,
         TaskWrapper(TaskUpdateTex, import_from_file = False),
         # TaskWrapper(TaskExtractChars, extracted_dir="modded_dds_font"),
         # TaskWrapper(TaskGeneratePreview, seperate_by_jmbname=True, preview_dir="jmks", extracted_chars_dir = "modded_dds_font"),
@@ -486,15 +502,15 @@ def main():
     custom = [
         TaskValidation,
         # TaskPrintFParams,
-        # TaskFixMovieOffset,
+        TaskFixMovieOffset,
         # TaskFlushFParams,
-        TaskTranslation,
-        TaskWrapper(TaskGeneratePreview, seperate_by_jmbname=True, preview_dir="jmks"),
+        # TaskTranslation,
+        # TaskWrapper(TaskGeneratePreview, seperate_by_jmbname=True, preview_dir="jmks"),
         # TaskWrapper(TaskUpdateTex, import_from_file = False),
         # TaskWrapper(TaskDumpDDSTex, dump_path="DDS_mod.dds"),
         # TaskWrapper(TaskExtractChars, extracted_dir="modded_dds_font"),
         # TaskWrapper(TaskGeneratePreview, preview_dir="jmks"),
-        # TaskSave,
+        TaskSave,
     ]
 
     should_run = input("Ensure the file lists are correct before running (y/N) ")
