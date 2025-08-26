@@ -5,7 +5,7 @@ import DDSTool
 import jmbUtils
 import jmbConst
 from jmbConst import JmkKind
-from jmbData import _TYPE_is_JA, BaseGdat, gDat, gDat_JA, gDat_US
+from jmbData import _TYPE_is_US,_TYPE_is_JA, BaseGdat, gDat, gDat_JA, gDat_US
 
 import argparse
 import json
@@ -220,6 +220,15 @@ def TaskPrintMetaData(self:JMBBaseTask):
     """
     print("\n==== Printing MetaData ====")
     print(self.jmb.meta)
+    for i in range(self.jmb.meta.sentence_num):
+        if _TYPE_is_JA(self.jmb):
+            print(f"st {i}")
+            for jmk_idx, jmk in enumerate(self.jmb.sentences[i].jimaku_list):
+                print(f"\t [{jmk_idx}] has char_data {jmk.char_data}")
+        elif _TYPE_is_US(self.jmb):
+            print(f"st {i} has char_data {self.jmb.sentences[i].char_data}")
+        else:
+            assert False, "unreachable"
 
 @basicTask
 def TaskPrintRegisteredChars(self:JMBBaseTask):
@@ -304,7 +313,7 @@ def TaskTranslation(self:JMBBaseTask):
     修改一部分文字
     """
     # TODO: add support for US version
-    if not isinstance(self.jmb, gDat_JA):
+    if not _TYPE_is_JA(self.jmb):
         raise NotImplementedError("US Version is not supported yet")
     self.jmb = cast(gDat_JA, self.jmb)
 
@@ -342,7 +351,7 @@ def TaskFixMovieOffset(self:JMBBaseTask):
     """
     修正错误的字幕时间
     """
-    if not isinstance(self.jmb, gDat_JA):
+    if not _TYPE_is_JA(self.jmb):
         raise ValueError("US Version doesn't have incorrect movie offset")
     self.jmb = cast(gDat_JA, self.jmb)
 
@@ -434,7 +443,9 @@ def run_tasks(input_path:str, tasks:list[type], **task_args):
             suite.addTest(loader.loadTestsFromTestCase(task))
 
     runner = unittest.TextTestRunner(failfast=True)
-    runner.run(suite)
+    result = runner.run(suite)
+    if not result.wasSuccessful():
+        raise Exception("test failed")
 
 def main():
     parser = argparse.ArgumentParser()
@@ -460,8 +471,69 @@ def main():
     # files.extend(lister.flatten_list(lister.getTutorial(JmkKind.JA)))
     files.extend(lister.flatten_list(lister.getZan(JmkKind.JA)))
     # NOTE: 我在人工做差分……
-    files = lister.filter(files, {"0100031J", "0110122J", "01030101", "01040101J"}) # NOTE: 2025/08/23晚做出的变化
-    files.extend(lister.flatten_list(lister.getHato(JmkKind.JA))) # NOTE: hato全部放上倒没问题
+    # NOTE: 要做的事情：
+    # 1. 把Susie的颜文字换成原版的，而不自己生成（就像引号一样）
+    # 2. 把云男的手办序号（1 2 3那些，10 11 12反而不用换）换成原版的，而不自己生成（就像引号一样）
+    # 3. DONE: diff新的和原本的文件夹差异，找出哪些地方改了，然后记录差分
+    # 4. DONE: 本杰明的名牌没有翻译？
+    # 5. DONE: 后面几个hato没翻译？
+    files = lister.filter(files, {
+        # Chara
+        "01030101J", # 注释 = DONE:
+        "01040101J",
+        "01090101J",
+        "05030101J",
+        "05070101J",
+        "05080102nmJ",
+        "05090802J",
+        "05500101J",
+        # Movie
+        "01010101",
+        "04050301",
+        "04060902",
+        # Zan
+        "0074010J",
+        "0100031J",
+        "0100061J",
+        "0100180J",
+        "0100250J",
+        "0110122J",
+        "0110200J",
+        "0110240J",
+        "0112030J",
+        "0121500J",
+        "0121510J",
+        "0201030J",
+        "0201200J",
+        "0201350J",
+        "0201360J",
+        "0300110J",
+        "0300140J",
+        "0300600J",
+        "0350080J",
+        "0401540J",
+        "0511230J",
+        "0511240J",
+        "0511310J",
+        "0521020J",
+        "0555140J",
+        "0555220J",
+        "0557000J",
+        # Panel
+        "P020208J",
+        # Stage
+        "Stage325_M03J",
+        "Stage326_M00J",
+        # Hato
+        "hato007201J",
+        "hato007301J",
+        "hato010001J",
+        "hato010002J",
+        "hato010003J",
+        "hato020105J",
+        "hato035001J",
+        "hato055600J",
+    }) # NOTE: 2025/08/24晚做出的变化
     # files = lister.filter(files, {"010001J", "010002J"})
     # files = lister.filter(files, {"0121000J", "0121020J", "0121110J"})
     # files = lister.filter(files, {"nmJ"})
@@ -471,7 +543,9 @@ def main():
     # files = lister.filter(files, {"P020109J"})
     # files = lister.filter(files, {"Stage_tutorialJ"})
 
+    files.sort()
     pprint(files, indent=2, width=80, depth=None, compact=True)
+    print("len:", len(files))
 
     tasks_preview_content = [
         TaskPrintMetaData,

@@ -380,10 +380,10 @@ class gDat_JA(BaseGdat):
                 fp.write(motion)
 
     def update_sentence_ctl(self, translation: list[list[str]], char2ctl_lookup: dict[str, int], validation_mode = False):
-        assert(self.meta.sentence_num == len(translation))
+        assert self.meta.sentence_num == len(translation), f"{self.meta.sentence_num=} != {len(translation)}"
 
         for i, local_sent in enumerate(translation):
-            assert(self.sentences[i].valid_jmk_num() == len(local_sent))
+            assert self.sentences[i].valid_jmk_num() == len(local_sent), f"{self.sentences[i].valid_jmk_num()=}, {len(local_sent)=}"
 
             for j, local_jmk in enumerate(local_sent):
                 local_ctls = []
@@ -430,3 +430,5 @@ class gDat_JA(BaseGdat):
 gDat = Union[gDat_JA, gDat_US]
 def _TYPE_is_JA(obj: gDat) -> TypeGuard[gDat_JA]:
     return isinstance(obj, gDat_JA)
+def _TYPE_is_US(obj: gDat) -> TypeGuard[gDat_US]:
+    return isinstance(obj, gDat_US)
