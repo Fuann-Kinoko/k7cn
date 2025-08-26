@@ -200,12 +200,19 @@ def gen(
     current_max_width = 0
     for char in unique_chars:
         kind = fontTool.check_kind(char, usage)
-        w = kind.get_width(usage, alpha_ch=char)
+        w = kind.get_width(usage, ch=char)
         h = kind.get_height(usage, alpha_ch=char)
         assert(h == HEIGHT)
         step = w
         if original_alignment and kind in (fontTool.FontKind.KANJI , fontTool.FontKind.KATA , fontTool.FontKind.NUM , fontTool.FontKind.SPECIAL):
             step += 1
+
+        char_img = fontTool.gen_char_image(char, usage)
+        codepoint = f"{ord(char):04x}".upper()
+        if usage == jmbConst.JmkUsage.Default and codepoint in fontTool.SUSIE_CHARS:
+            w = char_img.width // 4
+            step = w + 1
+            print(f"+++ Susie字符 {char}:{codepoint} 使用特殊宽度：{w}；平常都是:{kind.get_width(usage, ch=char)}")
 
         if current_x + step*4 >= max_width:
             row_count += 1
@@ -217,7 +224,6 @@ def gen(
         if False and usage == jmbConst.JmkUsage.Hato: # FIXME: is there any actual tilt?
             offset_y = - col_count
 
-        char_img = fontTool.gen_char_image(char, usage)
         canvas.composite(char_img, left=current_x, top=current_y+offset_y)
         char_img.close()
 

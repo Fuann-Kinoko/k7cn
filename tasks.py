@@ -453,9 +453,10 @@ def main():
     args = parser.parse_args()
 
     lister = k7FileList.FileLister()
-    files = lister.getCharaGeki(JmkKind.JA)     # 全部章节
+    # files = lister.getCharaGeki(JmkKind.JA)     # 全部章节
+    # files = lister.getTutorial(JmkKind.JA)     # 教程
     # files = lister.getCharaGeki(JmkKind.JA)[2]
-    # files = lister.getZan(JmkKind.JA)
+    files = lister.getZan(JmkKind.JA)
     # files = lister.getMovie(JmkKind.JA)[1]
     # files = lister.getZan(JmkKind.JA)[7]
     # files = lister.getHato(JmkKind.JA)[1]
@@ -463,77 +464,50 @@ def main():
     # files = lister.getHato(JmkKind.JA)
 
     files = lister.flatten_list(files)
-    files.extend(lister.flatten_list(lister.getHato(JmkKind.JA)))
-    files.extend(lister.flatten_list(lister.getMovie(JmkKind.JA)))
+    # files.extend(lister.flatten_list(lister.getHato(JmkKind.JA)))
+    # files.extend(lister.flatten_list(lister.getMovie(JmkKind.JA)))
     files.extend(lister.flatten_list(lister.getPanel(JmkKind.JA)))
     files.extend(lister.flatten_list(lister.getStage(JmkKind.JA)))
-    files.extend(lister.flatten_list(lister.getVoice(JmkKind.JA)))
-    # files.extend(lister.flatten_list(lister.getTutorial(JmkKind.JA)))
-    files.extend(lister.flatten_list(lister.getZan(JmkKind.JA)))
+    # files.extend(lister.flatten_list(lister.getVoice(JmkKind.JA)))
+    # # files.extend(lister.flatten_list(lister.getTutorial(JmkKind.JA)))
+    # files.extend(lister.flatten_list(lister.getZan(JmkKind.JA)))
     # NOTE: 我在人工做差分……
     # NOTE: 要做的事情：
-    # 1. 把Susie的颜文字换成原版的，而不自己生成（就像引号一样）
-    # 2. 把云男的手办序号（1 2 3那些，10 11 12反而不用换）换成原版的，而不自己生成（就像引号一样）
+    # 1. DONE: 把Susie的颜文字换成原版的，而不自己生成（就像引号一样）
+    # 2. DONE: 把云男的手办序号（1 2 3那些，10 11 12反而不用换）换成原版的，而不自己生成（就像引号一样）
+    #          不如云男的也放进Susie中
     # 3. DONE: diff新的和原本的文件夹差异，找出哪些地方改了，然后记录差分
     # 4. DONE: 本杰明的名牌没有翻译？
     # 5. DONE: 后面几个hato没翻译？
-    files = lister.filter(files, {
-        # Chara
-        "01030101J", # 注释 = DONE:
-        "01040101J",
-        "01090101J",
-        "05030101J",
-        "05070101J",
-        "05080102nmJ",
-        "05090802J",
-        "05500101J",
-        # Movie
-        "01010101",
-        "04050301",
-        "04060902",
-        # Zan
-        "0074010J",
-        "0100031J",
-        "0100061J",
-        "0100180J",
-        "0100250J",
-        "0110122J",
-        "0110200J",
-        "0110240J",
-        "0112030J",
-        "0121500J",
-        "0121510J",
-        "0201030J",
-        "0201200J",
-        "0201350J",
-        "0201360J",
-        "0300110J",
-        "0300140J",
-        "0300600J",
-        "0350080J",
-        "0401540J",
-        "0511230J",
-        "0511240J",
-        "0511310J",
-        "0521020J",
-        "0555140J",
-        "0555220J",
-        "0557000J",
-        # Panel
-        "P020208J",
-        # Stage
-        "Stage325_M03J",
-        "Stage326_M00J",
-        # Hato
-        "hato007201J",
-        "hato007301J",
-        "hato010001J",
-        "hato010002J",
-        "hato010003J",
-        "hato020105J",
-        "hato035001J",
-        "hato055600J",
-    }) # NOTE: 2025/08/24晚做出的变化
+    # 6. DONE: 把臭名昭著的感叹号修一下
+    # 7. DONE: tutorial_logJ.jmt内容感觉还要改不少？
+    # 8. DONE: tutorial_logJ.jmt里面数字与汉字不在一个水平线上
+    # 9. DONE: 开头order的汉字STRIMAGE
+    # 10.TODO: 开头裂纹打字机的汉字美工
+    # 11.TODO: 教程美工 + 系统美工
+    # 12.TODO: 云男美工
+    # 13.TODO: 笑颜输入密码的STRIMAGE
+    # files = lister.filter(files, {
+    #     # Zan
+    #     # "0073010J", # Susie 天使
+    #     # "0073011J",
+    #     # "0100070J", # Susie 日落上
+    #     # "0100071J",
+    #     # "0112030J", # Susie 日落下
+    #     # "0112031J",
+    #     # "0201020J", # Susie 云男
+    #     # "0201021J",
+    #     # "0300300J", # Susie 邂逅上
+    #     # "0300301J",
+    #     # "0350140J", # Susie 邂逅下
+    #     # "0350141J",
+    #     # Panel
+    #     "P020202J", # 会长编号
+    #     "P020203J",
+    #     # Stage
+    #     "Stage209_M00J", # 会长编号
+    #     "Stage209_M01J",
+    # }) # NOTE: 处理会长中
     # files = lister.filter(files, {"010001J", "010002J"})
     # files = lister.filter(files, {"0121000J", "0121020J", "0121110J"})
     # files = lister.filter(files, {"nmJ"})
@@ -541,7 +515,7 @@ def main():
     # files = lister.filter(files, {"Stage209_M00"})
     # files = lister.filter(files, {"voice01J"})
     # files = lister.filter(files, {"P020109J"})
-    # files = lister.filter(files, {"Stage_tutorialJ"})
+    # files = lister.filter(files, {"Stage_tutorialJ"}, reverse=True)
 
     files.sort()
     pprint(files, indent=2, width=80, depth=None, compact=True)

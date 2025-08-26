@@ -73,6 +73,23 @@ UPPERCASE_ALPHA_WIDTH = [
 LOWERCASE_ALPHA_WIDTH = [x + 9 for x in LOWERCASE_ALPHA_WIDTH]
 UPPERCASE_ALPHA_WIDTH = [x + 9 for x in UPPERCASE_ALPHA_WIDTH]
 
+SUSIE_CHARS = {
+    "00B4", "002D", "03A3", "005E",
+    "25A1", "25B3", "0028", "0029",
+    "30CE", "30FD", "0060", "301C",
+    "2018", "2207", "2212", "FF01",
+    "FF08", "FF09", "FF40", "FF64",
+    "FF65", "FF89", "FFE3", "0023",
+    "30D8", "309B", "0414", "00D7",
+    "002A", "003D", "004F", "0027",
+    "FF3E", "FF4F", "FF9F", "2312",
+    "266A", "25BD", "002F", "FF1B",
+    "3003", "2200",
+    "2460", "2461", "2462", "2463",
+    "2464", "2465", "2466", "2467",
+    "2468"
+}
+
 def get_face_scale_factor(usage: JmkUsage) -> float:
     match usage:
         case JmkUsage.Name:
@@ -139,7 +156,7 @@ class FontKind(Enum):
             case _:
                 assert False, "unreachable"
 
-    def get_width(self, usage: JmkUsage, alpha_ch: str|None = None) -> int:
+    def get_width(self, usage: JmkUsage, ch: str|None = None) -> int:
         scale = get_width_scale_factor(usage)
         match self:
             case FontKind.KANA:
@@ -155,11 +172,11 @@ class FontKind(Enum):
             case FontKind.SPECIAL:
                 return int(scale * SPECIAL_WIDTH)
             case FontKind.ALPHA:
-                assert alpha_ch is not None
-                if 'a'<= alpha_ch <= 'z':
-                    return int(scale * LOWERCASE_ALPHA_WIDTH[ord(alpha_ch)-ord('a')])
+                assert ch is not None
+                if 'a'<= ch <= 'z':
+                    return int(scale * LOWERCASE_ALPHA_WIDTH[ord(ch)-ord('a')])
                 else:
-                    return int(scale * UPPERCASE_ALPHA_WIDTH[ord(alpha_ch)-ord('A')])
+                    return int(scale * UPPERCASE_ALPHA_WIDTH[ord(ch)-ord('A')])
             case FontKind.PUNCT:
                 return int(scale * PUNCT_WIDTH)
             case _:
@@ -256,8 +273,13 @@ def gen_char_image(char: str, usage: JmkUsage, info: stFontParam|None = None) ->
     if info is not None:
         img = Image(width=info.w*4, height=info.h*4, background=Color('transparent'))
     else:
-        img = Image(width=kind.get_width(usage, alpha_ch = char)*4, height=kind.get_height(usage, alpha_ch = char)*4, background=Color('transparent'))
+        img = Image(width=kind.get_width(usage, ch = char)*4, height=kind.get_height(usage, alpha_ch = char)*4, background=Color('transparent'))
 
+    codepoint = f"{ord(char):04X}".upper()
+    if usage == JmkUsage.Default and codepoint in SUSIE_CHARS:
+        print(f"+++Using susie for {char} : {codepoint}")
+        img = Image(filename=f"assets/chars/Susie/{codepoint}.png")
+        return img
 
     if kind == FontKind.QUOTE:
         if usage == JmkUsage.Default:
@@ -305,7 +327,7 @@ def gen_char_image(char: str, usage: JmkUsage, info: stFontParam|None = None) ->
                 OFFSET = -16
         img.roll(y=OFFSET)
     elif font_path is Font_HiraginoMincho:
-        if usage == JmkUsage.Tutorial and kind == FontKind.ALPHA:
+        if usage == JmkUsage.Tutorial and (kind == FontKind.ALPHA or kind == FontKind.NUM):
             OFFSET = -8
         else:
             OFFSET = 0
@@ -383,9 +405,16 @@ def save_preview_jimaku(
             else:
                 char = ctl2char_lookup[ctl]
                 kind = check_kind(char, usage)
-                char_info = stFontParam(u=0,v=0,w=kind.get_width(usage, alpha_ch=char),h=kind.get_height(usage, alpha_ch=char))
+                char_info = stFontParam(u=0,v=0,w=kind.get_width(usage, ch=char),h=kind.get_height(usage, alpha_ch=char))
                 char_img = gen_char_image(char, usage, char_info)
-                step = kind.get_width(usage, alpha_ch=char)
+
+                codepoint = f"{ord(char):04x}".upper()
+                if usage == JmkUsage.Default and codepoint in SUSIE_CHARS:
+                    step = (char_img.width // 4) + 1
+                    print(f"+++ Susie字符[{char}]的特殊宽度：{step}")
+                else:
+                    step = kind.get_width(usage, ch=char)
+
                 if original_alignment and kind in (FontKind.KANJI , FontKind.KATA , FontKind.NUM , FontKind.SPECIAL):
                     step += 1
             # print(f"\tctl = {ctl}; char = {char}; Kind = {kind};\tparams = {char_info}")
@@ -486,11 +515,19 @@ def genFParams(
     row_count = 0
     for char in unique_chars:
         kind = check_kind(char, usage)
-        w = kind.get_width(usage, alpha_ch=char)
+        w = kind.get_width(usage, ch=char)
         h = kind.get_height(usage, alpha_ch=char)
         step = w
         if original_alignment and kind in (FontKind.KANJI , FontKind.KATA , FontKind.NUM , FontKind.SPECIAL):
             step += 1
+
+        codepoint = f"{ord(char):04x}".upper()
+        if usage == JmkUsage.Default and codepoint in SUSIE_CHARS:
+            with gen_char_image(char, usage) as char_img:
+                w = char_img.width // 4
+                step = w + 1
+                # print(f"+++ Susie字符 {char}:{codepoint} 使用特殊宽度：{w}；平常都是:{kind.get_width(usage, ch=char)}")
+
 
         if u + step >= max_width:
             row_count += 1
