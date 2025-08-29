@@ -469,7 +469,7 @@ def main():
     files.extend(lister.flatten_list(lister.getPanel(JmkKind.JA)))
     files.extend(lister.flatten_list(lister.getStage(JmkKind.JA)))
     # files.extend(lister.flatten_list(lister.getVoice(JmkKind.JA)))
-    # # files.extend(lister.flatten_list(lister.getTutorial(JmkKind.JA)))
+    files.extend(lister.flatten_list(lister.getTutorial(JmkKind.JA)))
     # files.extend(lister.flatten_list(lister.getZan(JmkKind.JA)))
     # NOTE: 我在人工做差分……
     # NOTE: 要做的事情：
@@ -482,11 +482,18 @@ def main():
     # 6. DONE: 把臭名昭著的感叹号修一下
     # 7. DONE: tutorial_logJ.jmt内容感觉还要改不少？
     # 8. DONE: tutorial_logJ.jmt里面数字与汉字不在一个水平线上
-    # 9. DONE: 开头order的汉字STRIMAGE
-    # 10.TODO: 开头裂纹打字机的汉字美工
-    # 11.TODO: 教程美工 + 系统美工
-    # 12.TODO: 云男美工
-    # 13.TODO: 笑颜输入密码的STRIMAGE
+    # 9. DONE: 每章开头order的汉字STRIMAGE
+    # 10.TODO: 每章开头裂纹打字机的汉字美工
+    # 11.DONE: 教程美工 + 系统美工
+    #           DONE: 开头语言选择
+    #           DONE: 开头guro提醒
+    #           DONE: 新游戏难度选择
+    #           DONE: 教程
+    #           DONE: 返回界面
+    # 12.DONE: 云男美工
+    # 13.DONE: 笑颜输入密码的STRIMAGE
+    # 14.DONE: 狮子美工
+    # 15.TODO: 防止在Tutorial Panel中，殺这个字被放大
     # files = lister.filter(files, {
     #     # Zan
     #     # "0073010J", # Susie 天使
@@ -515,7 +522,7 @@ def main():
     # files = lister.filter(files, {"Stage209_M00"})
     # files = lister.filter(files, {"voice01J"})
     # files = lister.filter(files, {"P020109J"})
-    # files = lister.filter(files, {"Stage_tutorialJ"}, reverse=True)
+    files = lister.filter(files, {"tutorial_logJ", "Stage_tutorialJ"})
 
     files.sort()
     pprint(files, indent=2, width=80, depth=None, compact=True)

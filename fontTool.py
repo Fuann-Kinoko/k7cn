@@ -210,7 +210,7 @@ def check_kind(char: str, usage: JmkUsage) -> FontKind:
     elif (char not in {"ー", "―", "‐"}) and (0x30A0 <= code <= 0x30FF):
         return FontKind.KATA
     # 特殊字符（如「殺」「死」）
-    elif (char == "殺" or char == "死") and usage != JmkUsage.Voice:
+    elif (char == "殺" or char == "死") and usage != JmkUsage.Voice and usage != JmkUsage.Tutorial:
         return FontKind.SPECIAL
     # 默认认为是汉字
     else:
