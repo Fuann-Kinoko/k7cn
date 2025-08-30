@@ -13,16 +13,16 @@ import io
 import wand.image
 
 class BaseGdat(ABC):
-    def __init__(self, source = None):
+    def __init__(self, source = None, bigEndian = False):
         self.fParams : list[stFontParam]
         self.tex : stTex
 
         if source is not None:
             if isinstance(source, str):
                 with open(source, 'rb') as fp:
-                    self.read(fp)
+                    self.read(fp, bigEndian)
             else:
-                self.read(source)
+                self.read(source, bigEndian)
 
     @classmethod
     def create(cls, source, kind:JmkKind):
@@ -39,7 +39,7 @@ class BaseGdat(ABC):
             assert False, "unreachable"
 
     @abstractmethod
-    def read(self, fp):
+    def read(self, fp, bigEndian = False):
         pass
 
     @abstractmethod
@@ -229,7 +229,7 @@ class gDat_US(BaseGdat):
         assert len(self.fParams) > 0
 
 class gDat_JA(BaseGdat):
-    def __init__(self, fp = None):
+    def __init__(self, fp = None, bigEndian = False):
         self.meta : MetaData_JA
         self.sentences : list[stOneSentence]
         self.fParams : list[stFontParam]
@@ -237,23 +237,23 @@ class gDat_JA(BaseGdat):
         self.motions : list[bytes]
 
         self.end_by_tex : bool = False
-        super().__init__(fp)
+        super().__init__(fp, bigEndian)
 
-    def read(self, fp):
-        self.meta = MetaData_JA(fp)
+    def read(self, fp, bigEndian = False):
+        self.meta = MetaData_JA(fp, bigEndian)
 
         fp.seek(self.meta.sentence_offset)
         self.sentences : list[stOneSentence] = []
         for _ in range(self.meta.sentence_num):
-            self.sentences.append(stOneSentence(fp))
+            self.sentences.append(stOneSentence(fp, bigEndian))
 
         fp.seek(self.meta.char_offset)
         self.fParams : list[stFontParam] = []
         for _ in range(self.meta.char_num):
-            self.fParams.append(stFontParam(fp))
+            self.fParams.append(stFontParam(fp, bigEndian = bigEndian))
 
         fp.seek(self.meta.tex_offset)
-        self.tex = stTex(fp)
+        self.tex = stTex(fp, bigEndian)
         after_tex = fp.tell()
         if after_tex % 32 != 0:
             padding_size = 32 - (after_tex % 32)

@@ -3,6 +3,8 @@ import jmbConst
 import jmbUtils
 from dataclasses import dataclass
 
+from contextlib import contextmanager
+
 import struct
 import os
 
@@ -22,6 +24,22 @@ def write_c_string(s, length):
         # 填充 \x00 和 \xcd
         padding = bytes([0xCD] * (length - len(encoded) - 1))
         return encoded + b'\x00' + padding
+
+class EndianHandler:
+    def __init__(self, big_endian=False):
+        self.endian_char = '>' if big_endian else '<'
+    def unpack(self, fmt, data):
+        return struct.unpack(f'{self.endian_char}{fmt}', data)
+    def pack(self, fmt, value):
+        return struct.pack(f'{self.endian_char}{fmt}', value)
+    def unpack_array(self, fmt, count, data):
+        return struct.unpack(f'{self.endian_char}{count}{fmt}', data)
+    def pack_array(self, fmt, values):
+        count = len(values)
+        return struct.pack(f'{self.endian_char}{count}{fmt}', *values)
+    @contextmanager
+    def context(self):
+        yield self
 
 class MetaData_US:
     def __init__(self, fp = None):
@@ -66,7 +84,7 @@ class MetaData_US:
         )
 
 class MetaData_JA:
-    def __init__(self, fp = None):
+    def __init__(self, fp = None, bigEndian = False):
         self.sentence_num : int = 0                 # s16
         self.char_num : int = 0                     # s16
         self.sentence_offset : int = 0              # u32
@@ -74,29 +92,32 @@ class MetaData_JA:
         self.tex_offset : int = 0                   # u32
         self.s_motion_offset : int = 0              # u32
         self.s_motion_size_tbl : list[int] = []     # u32[] NOTE: 不考虑tbl，大小至少为20
+        self.__big_endian = bigEndian
         if fp is not None:
             self.read(fp)
 
     def read(self, fp):
-        self.sentence_num = struct.unpack('<h', fp.read(2))[0]      # s16
-        self.char_num = struct.unpack('<h', fp.read(2))[0]          # s16
-        self.sentence_offset = struct.unpack('<I', fp.read(4))[0]   # u32
-        self.char_offset = struct.unpack('<I', fp.read(4))[0]       # u32
-        self.tex_offset = struct.unpack('<I', fp.read(4))[0]        # u32
-        self.s_motion_offset = struct.unpack('<I', fp.read(4))[0]   # u32
-        self.s_motion_size_tbl = list(struct.unpack(                # u32[]
-            f'<{self.sentence_num}I',
-            fp.read(4 * self.sentence_num)
+        handler = EndianHandler(self.__big_endian)
+        self.sentence_num = handler.unpack('h', fp.read(2))[0]      # s16
+        self.char_num = handler.unpack('h', fp.read(2))[0]          # s16
+        self.sentence_offset = handler.unpack('I', fp.read(4))[0]   # u32
+        self.char_offset = handler.unpack('I', fp.read(4))[0]       # u32
+        self.tex_offset = handler.unpack('I', fp.read(4))[0]        # u32
+        self.s_motion_offset = handler.unpack('I', fp.read(4))[0]   # u32
+        self.s_motion_size_tbl = list(handler.unpack_array(         # u32[]
+            'I', self.sentence_num, fp.read(4 * self.sentence_num)
         ))
 
     def write(self, fp):
-        fp.write(struct.pack('<h', self.sentence_num))
-        fp.write(struct.pack('<h', self.char_num))
-        fp.write(struct.pack('<I', self.sentence_offset))
-        fp.write(struct.pack('<I', self.char_offset))
-        fp.write(struct.pack('<I', self.tex_offset))
-        fp.write(struct.pack('<I', self.s_motion_offset))
-        fp.write(struct.pack(f'<{self.sentence_num}I', *self.s_motion_size_tbl))
+        handler = EndianHandler(self.__big_endian)
+        fp.write(handler.pack('h', self.sentence_num))
+        fp.write(handler.pack('h', self.char_num))
+        fp.write(handler.pack('I', self.sentence_offset))
+        fp.write(handler.pack('I', self.char_offset))
+        fp.write(handler.pack('I', self.tex_offset))
+        fp.write(handler.pack('I', self.s_motion_offset))
+        if self.sentence_num > 0:
+            fp.write(handler.pack_array('I', self.s_motion_size_tbl))
 
     def dump(self, filename):
         with open(filename, 'wb') as f:
@@ -119,7 +140,7 @@ class MetaData_JA:
         )
 
 class stInfo:
-    def __init__(self, fp = None):
+    def __init__(self, fp = None, bigEndian = False):
         self.STRUCT_SIZE = 76
         self.wait = 0            # s32
         self.hps_file = ''       # （FILE_LENGTH bytes）
@@ -128,29 +149,32 @@ class stInfo:
         self.countinue = 0       # s16
         self.key = 0             # s16
         self.padding = b''
+        self.__big_endian = bigEndian
         if fp is not None:
             self.read(fp)
 
     def read(self, fp):
+        handler = EndianHandler(self.__big_endian)
         before = fp.tell()
-        self.wait = struct.unpack('<i', fp.read(4))[0]         # s32
+        self.wait = handler.unpack('i', fp.read(4))[0]         # s32
         self.hps_file = read_c_string(fp.read(jmbConst.FILE_LENGTH))
         self.mth_file = read_c_string(fp.read(jmbConst.FILE_LENGTH))
-        self.back_locate = struct.unpack('<h', fp.read(2))[0]  # s16
-        self.countinue = struct.unpack('<h', fp.read(2))[0]    # s16
-        self.key = struct.unpack('<h', fp.read(2))[0]          # s16
+        self.back_locate = handler.unpack('h', fp.read(2))[0]  # s16
+        self.countinue = handler.unpack('h', fp.read(2))[0]    # s16
+        self.key = handler.unpack('h', fp.read(2))[0]          # s16
         self.padding = fp.read(2) # NOTE: 4-byte alignment padding for struct
         after = fp.tell()
         assert(after - before == self.STRUCT_SIZE)
 
     def write(self, fp):
+        handler = EndianHandler(self.__big_endian)
         before = fp.tell()
-        fp.write(struct.pack('<i', self.wait))             # s32
+        fp.write(handler.pack('i', self.wait))             # s32
         fp.write(write_c_string(self.hps_file, jmbConst.FILE_LENGTH))
         fp.write(write_c_string(self.mth_file, jmbConst.FILE_LENGTH))
-        fp.write(struct.pack('<h', self.back_locate))      # s16
-        fp.write(struct.pack('<h', self.countinue))        # s16
-        fp.write(struct.pack('<h', self.key))              # s16
+        fp.write(handler.pack('h', self.back_locate))      # s16
+        fp.write(handler.pack('h', self.countinue))        # s16
+        fp.write(handler.pack('h', self.key))              # s16
         fp.write(self.padding) # NOTE: alignment padding for struct
         after = fp.tell()
         assert(after - before == self.STRUCT_SIZE)
@@ -170,33 +194,32 @@ class stInfo:
                 f"back_locate={self.back_locate}, countinue={self.countinue}, key={self.key}, padding={self.padding})")
 
 class stRubiDat:
-    def __init__(self, fp=None):
+    def __init__(self, fp=None, bigEndian = False):
         self.STRUCT_SIZE = 22
         self.from_num : int = -1                # s8
         self.to_num : int = -1                  # s8
         self.char_id : list[int] = []           # s16[jmbConst.JIMAKU_RUBI_MAX]
+        self.__big_endian = bigEndian
         if fp is not None:
             self.read(fp)
 
     def read(self, fp):
+        handler = EndianHandler(self.__big_endian)
         before = fp.tell()
-        self.from_num = struct.unpack('<b', fp.read(1))[0]       # s8
-        self.to_num = struct.unpack('<b', fp.read(1))[0]         # s8
-        self.char_id = list(struct.unpack(
-            f'<{jmbConst.JIMAKU_RUBI_MAX}h',
-            fp.read(2 * jmbConst.JIMAKU_RUBI_MAX)
+        self.from_num = handler.unpack('b', fp.read(1))[0]       # s8
+        self.to_num = handler.unpack('b', fp.read(1))[0]         # s8
+        self.char_id = list(handler.unpack_array(
+            'h', jmbConst.JIMAKU_RUBI_MAX, fp.read(2 * jmbConst.JIMAKU_RUBI_MAX)
         ))
         after = fp.tell()
         assert(after - before == self.STRUCT_SIZE)
 
     def write(self, fp):
+        handler = EndianHandler(self.__big_endian)
         before = fp.tell()
-        fp.write(struct.pack('<b', self.from_num))   # s8
-        fp.write(struct.pack('<b', self.to_num))     # s8
-        fp.write(struct.pack(
-            f'<{jmbConst.JIMAKU_RUBI_MAX}h',
-            *self.char_id
-        ))
+        fp.write(handler.pack('b', self.from_num))   # s8
+        fp.write(handler.pack('b', self.to_num))     # s8
+        fp.write(handler.pack_array('h', self.char_id))
         after = fp.tell()
         assert(after - before == self.STRUCT_SIZE)
 
@@ -320,12 +343,13 @@ class stJimaku_US:
                 f"char_data='{char_str}...')")
 
 class stJimaku_JA:
-    def __init__(self, fp = None):
+    def __init__(self, fp = None, bigEndian = False):
         self.STRUCT_SIZE = 424
         self.wait = 0             # s32
         self.disp_time = 0        # s32
         self.char_data : list[int]  = []            # s16[jmbConst.JIMAKU_CHAR_MAX] (2 * 32 = 64)
         self.rubi_data : list[stRubiDat] = []       # stRubiDat[jmbConst.JIMAKU_RUBI_DAT_MAX] (22 * 16 = 352)
+        self.__big_endian = bigEndian
         if fp is not None:
             self.read(fp)
 
@@ -356,30 +380,28 @@ class stJimaku_JA:
             self.rubi_data[i].clear()
 
     def read(self, fp):
+        handler = EndianHandler(self.__big_endian)
         before = fp.tell()
-        self.wait = struct.unpack('<i', fp.read(4))[0]          # s32
-        self.disp_time = struct.unpack('<i', fp.read(4))[0]     # s32
+        self.wait = handler.unpack('i', fp.read(4))[0]          # s32
+        self.disp_time = handler.unpack('i', fp.read(4))[0]     # s32
         # 读取字符数据
-        self.char_data = list(struct.unpack(
-            f'<{jmbConst.JIMAKU_CHAR_MAX}h',
-            fp.read(2 * jmbConst.JIMAKU_CHAR_MAX)
+        self.char_data = list(handler.unpack_array(
+            'h', jmbConst.JIMAKU_CHAR_MAX, fp.read(2 * jmbConst.JIMAKU_CHAR_MAX)
         ))
         # 读取注音数据
         self.rubi_data = []
         for _ in range(jmbConst.JIMAKU_RUBI_DAT_MAX):
-            self.rubi_data.append(stRubiDat(fp))
+            self.rubi_data.append(stRubiDat(fp, self.__big_endian))
         after = fp.tell()
         assert(after - before == self.STRUCT_SIZE)
 
     def write(self, fp):
+        handler = EndianHandler(self.__big_endian)
         before = fp.tell()
-        fp.write(struct.pack('<i', self.wait))             # s32
-        fp.write(struct.pack('<i', self.disp_time))        # s32
+        fp.write(handler.pack('i', self.wait))             # s32
+        fp.write(handler.pack('i', self.disp_time))        # s32
 
-        fp.write(struct.pack(
-            f'<{jmbConst.JIMAKU_CHAR_MAX}h',
-            *self.char_data
-        ))
+        fp.write(handler.pack_array('h', self.char_data))
 
         for rubi in self.rubi_data:
             rubi.write(fp)
@@ -438,10 +460,11 @@ class stJimaku_JA:
                 f"char_data='{char_str}...', rubi_data={len(self.rubi_data)} items)")
 
 class stOneSentence:
-    def __init__(self, fp = None):
+    def __init__(self, fp = None, bigEndian = False):
         self.STRUCT_SIZE = 6860
         self.info : stInfo = stInfo()               # stInfo对象 (76)
         self.jimaku_list : list[stJimaku_JA] = []      # stJimaku对象列表（jmbConst.JIMAKU_LINE_MAX个） (16 * 424)
+        self.__big_endian = bigEndian
         if fp is not None:
             self.read(fp)
 
@@ -462,7 +485,7 @@ class stOneSentence:
         # 读取stJimaku列表
         self.jimaku_list = []
         for _ in range(jmbConst.JIMAKU_LINE_MAX):
-            jimaku = stJimaku_JA(fp)
+            jimaku = stJimaku_JA(fp, self.__big_endian)
             self.jimaku_list.append(jimaku)
         assert(len(self.jimaku_list) == jmbConst.JIMAKU_LINE_MAX)
         after = fp.tell()
@@ -491,19 +514,22 @@ class stOneSentence:
                 f"jimaku_list=[{len(self.jimaku_list)} items])")
 
 class stFontParam:
-    def __init__(self, fp=None, *, u=0, v=0, w=0, h=0):
+    def __init__(self, fp=None, bigEndian=False, *, u=0, v=0, w=0, h=0):
         self.u: int = u             # u16
         self.v: int = v             # u16
         self.w: int = w             # u16
         self.h: int = h             # u16
+        self.__big_endian = bigEndian
         if fp is not None:
             self.read(fp)
 
     def read(self, fp):
-        self.u, self.v, self.w, self.h = struct.unpack('<4H', fp.read(8))
+        endian = '>' if self.__big_endian else '<'
+        self.u, self.v, self.w, self.h = struct.unpack(f'{endian}4H', fp.read(8))
 
     def write(self, fp):
-        fp.write(struct.pack('<4H', self.u, self.v, self.w, self.h))
+        endian = '>' if self.__big_endian else '<'
+        fp.write(struct.pack(f'{endian}4H', self.u, self.v, self.w, self.h))
 
     def dump(self, fp):
         raise NotImplementedError
@@ -729,44 +755,48 @@ class texStrImage:
         self.tex.write(fp)
 
 class texMeta:
-    def __init__(self, fp=None):
+    def __init__(self, fp=None, bigEndian = False):
         self.STRUCT_SIZE = 72
         self.magic = b'\x00'*4
         self.encoding = b'\x00'*4   # 4 bytes, 0,1,2,... = I4/I8/IA4/IA8/RGB565/RGB5A3/RGBA8(32?)/...
         self.w = 0                  # u16, 2 bytes
         self.h = 0                  # u16, 2 bytes
         self.dds_size = 0           # u32, 4 bytes
+        self.__big_endian = bigEndian
         if fp is not None:
             self.read(fp)
 
     def read(self, fp):
+        handler = EndianHandler(self.__big_endian)
         before = fp.tell()
         self.magic = fp.read(4)
         assert self.magic == b'GCT0' or self.magic == b'\x00'*4, f"Assertion Failed. read {self.magic}, expect: 'GCT0'/'0000'"
 
         self.encoding = fp.read(4)
 
-        self.w = struct.unpack('<H', fp.read(2))[0]
-        self.h = struct.unpack('<H', fp.read(2))[0]
-        assert(fp.read(4) == b'\x00'*4)
-        assert(fp.read(4) == b'@\x00\x00\x00')
-        assert(fp.read(44) == b'\x00' * 44)
-        assert(fp.read(4) == b'K7TX')
-        self.dds_size = struct.unpack('<I', fp.read(4))[0]
+        self.w = handler.unpack('H', fp.read(2))[0]
+        self.h = handler.unpack('H', fp.read(2))[0]
+        print(f"{self.w=}, {self.h=}")
+        assert fp.read(4)   == b'\x00'*4
+        assert fp.read(4)   == (b'\x00\x00\x00@' if self.__big_endian else b'@\x00\x00\x00'), f"Assertion Failed. read {fp.read(4)}, expect: '@'/'0000'"
+        assert fp.read(44)  == b'\x00' * 44
+        assert fp.read(4)   == (b'XT7K' if self.__big_endian else b'K7TX')
+        self.dds_size = handler.unpack('I', fp.read(4))[0]
         after = fp.tell()
         assert(after - before == self.STRUCT_SIZE)
 
     def write(self, fp):
+        handler = EndianHandler(self.__big_endian)
         before = fp.tell()
         fp.write(self.magic)
         fp.write(self.encoding)
-        fp.write(struct.pack('<H', self.w))
-        fp.write(struct.pack('<H', self.h))
+        fp.write(handler.pack('H', self.w))
+        fp.write(handler.pack('H', self.h))
         fp.write(b'\x00'*4)
-        fp.write(b'@\x00\x00\x00')
+        fp.write(b'\x00\x00\x00@' if self.__big_endian else b'@\x00\x00\x00')
         fp.write(b'\x00'*44)
-        fp.write(b'K7TX')
-        fp.write(struct.pack('<I', self.dds_size))
+        fp.write(b'XT7K' if self.__big_endian else b'K7TX')
+        fp.write(handler.pack('I', self.dds_size))
         after = fp.tell()
         assert(after - before == self.STRUCT_SIZE)
 
@@ -780,14 +810,15 @@ class texMeta:
         return (f"texMeta(magic={self.magic}, encoding={self.encoding}, w={self.w}, h={self.h}, dds_size={self.dds_size})")
 
 class stTex:
-    def __init__(self, fp=None):
+    def __init__(self, fp=None, bigEndian = False):
         self.header : texMeta
         self.dds : bytes
+        self.__big_endian = bigEndian
         if fp is not None:
             self.read(fp)
 
     def read(self, fp):
-        self.header = texMeta(fp)
+        self.header = texMeta(fp, self.__big_endian)
         self.dds = fp.read(self.header.dds_size)
         assert(self.dds[:4] == b'DDS ')
 
@@ -805,6 +836,44 @@ class stTex:
 
     def __repr__(self):
         return (f"stTex : header = {self.header}, len(dds) = {len(self.dds)}")
+
+class oldGCTex:
+    def __init__(self, fp=None, bigEndian = False):
+        self.header_magic = b'\x00'*4
+        self.header_encoding = b'\x00'*4
+        self.header_w = 0                   # u16, 2 bytes
+        self.header_h = 0                   # u16, 2 bytes
+        self.flags = b'\x00'*4
+        self.content_offset = 0             # u32, 4 bytes
+        self.texture : bytes
+        self.__big_endian = bigEndian
+        if fp is not None:
+            self.read(fp)
+
+    def read(self, fp):
+        handler = EndianHandler(self.__big_endian)
+        self.header_magic = fp.read(4)
+        self.header_encoding = fp.read(4)
+        self.header_w = handler.unpack('H', fp.read(2))[0]
+        self.header_h = handler.unpack('H', fp.read(2))[0]
+        self.flags = fp.read(4)
+        self.content_offset = handler.unpack('I', fp.read(4))[0]
+        fp.seek(fp.tell() + self.content_offset - 20)
+        self.texture = fp.read()
+
+    def write(self, fp):
+        handler = EndianHandler(self.__big_endian)
+        fp.write(self.header_magic)
+        fp.write(self.header_encoding)
+        fp.write(handler.pack('H', self.header_w))
+        fp.write(handler.pack('H', self.header_h))
+        fp.write(self.flags)
+        fp.write(handler.pack('I', self.content_offset))
+        fp.write(b'\x00' * (self.content_offset - 20))
+        fp.write(self.texture)
+
+    def __repr__(self):
+        return (f"oldGCTex(header_magic={self.header_magic}, header_encoding={self.header_encoding}, header_w={self.header_w}, header_h={self.header_h}, flags={self.flags}, content_offset={self.content_offset}, len(texture)={len(self.texture)})")
 
 
 stJimaku = Union[stJimaku_JA, stJimaku_US]
