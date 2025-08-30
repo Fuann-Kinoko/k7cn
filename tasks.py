@@ -453,10 +453,10 @@ def main():
     args = parser.parse_args()
 
     lister = k7FileList.FileLister()
-    # files = lister.getCharaGeki(JmkKind.JA)     # 全部章节
+    files = lister.getCharaGeki(JmkKind.JA)     # 全部章节
     # files = lister.getTutorial(JmkKind.JA)     # 教程
     # files = lister.getCharaGeki(JmkKind.JA)[2]
-    files = lister.getZan(JmkKind.JA)
+    # files = lister.getZan(JmkKind.JA)
     # files = lister.getMovie(JmkKind.JA)[1]
     # files = lister.getZan(JmkKind.JA)[7]
     # files = lister.getHato(JmkKind.JA)[1]
@@ -464,13 +464,13 @@ def main():
     # files = lister.getHato(JmkKind.JA)
 
     files = lister.flatten_list(files)
-    # files.extend(lister.flatten_list(lister.getHato(JmkKind.JA)))
-    # files.extend(lister.flatten_list(lister.getMovie(JmkKind.JA)))
+    files.extend(lister.flatten_list(lister.getZan(JmkKind.JA)))
+    files.extend(lister.flatten_list(lister.getHato(JmkKind.JA)))
+    files.extend(lister.flatten_list(lister.getMovie(JmkKind.JA)))
     files.extend(lister.flatten_list(lister.getPanel(JmkKind.JA)))
     files.extend(lister.flatten_list(lister.getStage(JmkKind.JA)))
-    # files.extend(lister.flatten_list(lister.getVoice(JmkKind.JA)))
+    files.extend(lister.flatten_list(lister.getVoice(JmkKind.JA)))
     files.extend(lister.flatten_list(lister.getTutorial(JmkKind.JA)))
-    # files.extend(lister.flatten_list(lister.getZan(JmkKind.JA)))
     # NOTE: 我在人工做差分……
     # NOTE: 要做的事情：
     # 1. DONE: 把Susie的颜文字换成原版的，而不自己生成（就像引号一样）
@@ -493,7 +493,8 @@ def main():
     # 12.DONE: 云男美工
     # 13.DONE: 笑颜输入密码的STRIMAGE
     # 14.DONE: 狮子美工
-    # 15.TODO: 防止在Tutorial Panel中，殺这个字被放大
+    # 15.DONE: 防止在Tutorial Panel中，殺这个字被放大
+    # 16.TODO: 等全部生成完毕后，记得重新生成一下Zan的0072020J，把那家伙替换成他
     # files = lister.filter(files, {
     #     # Zan
     #     # "0073010J", # Susie 天使
@@ -521,10 +522,11 @@ def main():
     # files = lister.filter(files, {"04050301"})
     # files = lister.filter(files, {"Stage209_M00"})
     # files = lister.filter(files, {"voice01J"})
-    # files = lister.filter(files, {"P020109J"})
-    files = lister.filter(files, {"tutorial_logJ", "Stage_tutorialJ"})
+    files = lister.filter(files, {"0072020J"})
+    # files = lister.filter(files, {"tutorial_logJ", "Stage_tutorialJ"})
 
     files.sort()
+    # files = next((files[i:] for i, s in enumerate(files) if "05120101J" in s), [])
     pprint(files, indent=2, width=80, depth=None, compact=True)
     print("len:", len(files))
 
@@ -557,7 +559,7 @@ def main():
     custom = [
         TaskValidation,
         # TaskPrintFParams,
-        TaskFixMovieOffset,
+        # TaskFixMovieOffset,
         # TaskFlushFParams,
         # TaskTranslation,
         # TaskWrapper(TaskGeneratePreview, seperate_by_jmbname=True, preview_dir="jmks"),
@@ -565,7 +567,7 @@ def main():
         # TaskWrapper(TaskDumpDDSTex, dump_path="DDS_mod.dds"),
         # TaskWrapper(TaskExtractChars, extracted_dir="modded_dds_font"),
         # TaskWrapper(TaskGeneratePreview, preview_dir="jmks"),
-        TaskSave,
+        # TaskSave,
     ]
 
     should_run = input("Ensure the file lists are correct before running (y/N) ")
@@ -577,8 +579,8 @@ def main():
             # NOTE: switch between these sets or create your own stuff
             # tasks = tasks_preview_content,
             # tasks = tasks_test_translation,
-            tasks = tasks_save_translation,
-            # tasks = custom,
+            # tasks = tasks_save_translation,
+            tasks = custom,
         )
 
     # All avaliable tasks:
