@@ -497,36 +497,44 @@ def main():
     # 16.DONE: 等全部生成完毕后，记得重新生成一下Zan的0072020J，把那家伙替换成他
     # 17.TODO: 切换地图/装弹时的noiseFont，现在算是生成出来了但没有通篇确认英文有没有乱码
     # 18.DONE: 地图文字生成
-    # 19.TODO: 替换SpMenu的日语字，变成中文字
+    # 19.DONE: 替换SpMenu的日语字，变成中文字
     # 20.TODO: 把群里反馈的所有内容更新
-    # files = lister.filter(files, {
-    #     # Zan
-    #     # "0073010J", # Susie 天使
-    #     # "0073011J",
-    #     # "0100070J", # Susie 日落上
-    #     # "0100071J",
-    #     # "0112030J", # Susie 日落下
-    #     # "0112031J",
-    #     # "0201020J", # Susie 云男
-    #     # "0201021J",
-    #     # "0300300J", # Susie 邂逅上
-    #     # "0300301J",
-    #     # "0350140J", # Susie 邂逅下
-    #     # "0350141J",
-    #     # Panel
-    #     "P020202J", # 会长编号
-    #     "P020203J",
-    #     # Stage
-    #     "Stage209_M00J", # 会长编号
-    #     "Stage209_M01J",
-    # }) # NOTE: 处理会长中
+    files = lister.filter(files, {
+        # Zan
+        "0072042J",
+        "0073062J",
+        "0073070J",
+        "0110200J",
+        "0511240J",
+        "0901190J",
+        # Hato
+        "hato010001J"
+        # "0073010J", # Susie 天使
+        # "0073011J",
+        # "0100070J", # Susie 日落上
+        # "0100071J",
+        # "0112030J", # Susie 日落下
+        # "0112031J",
+        # "0201020J", # Susie 云男
+        # "0201021J",
+        # "0300300J", # Susie 邂逅上
+        # "0300301J",
+        # "0350140J", # Susie 邂逅下
+        # "0350141J",
+        # # Panel
+        # "P020202J", # 会长编号
+        # "P020203J",
+        # # Stage
+        # "Stage209_M00J", # 会长编号
+        # "Stage209_M01J",
+    }) # NOTE: 更新翻译中
     # files = lister.filter(files, {"010001J", "010002J"})
     # files = lister.filter(files, {"0121000J", "0121020J", "0121110J"})
     # files = lister.filter(files, {"nmJ"})
     # files = lister.filter(files, {"04050301"})
     # files = lister.filter(files, {"Stage209_M00"})
     # files = lister.filter(files, {"voice01J"})
-    files = lister.filter(files, {"0072020J"})
+    # files = lister.filter(files, {"0072020J"})
     # files = lister.filter(files, {"tutorial_logJ", "Stage_tutorialJ"})
 
     files.sort()
@@ -583,8 +591,8 @@ def main():
             # NOTE: switch between these sets or create your own stuff
             # tasks = tasks_preview_content,
             # tasks = tasks_test_translation,
-            # tasks = tasks_save_translation,
-            tasks = custom,
+            tasks = tasks_save_translation,
+            # tasks = custom,
         )
 
     # All avaliable tasks:
