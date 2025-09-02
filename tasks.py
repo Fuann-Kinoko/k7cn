@@ -494,7 +494,11 @@ def main():
     # 13.DONE: 笑颜输入密码的STRIMAGE
     # 14.DONE: 狮子美工
     # 15.DONE: 防止在Tutorial Panel中，殺这个字被放大
-    # 16.TODO: 等全部生成完毕后，记得重新生成一下Zan的0072020J，把那家伙替换成他
+    # 16.DONE: 等全部生成完毕后，记得重新生成一下Zan的0072020J，把那家伙替换成他
+    # 17.TODO: 切换地图/装弹时的noiseFont，现在算是生成出来了但没有通篇确认英文有没有乱码
+    # 18.DONE: 地图文字生成
+    # 19.TODO: 替换SpMenu的日语字，变成中文字
+    # 20.TODO: 把群里反馈的所有内容更新
     # files = lister.filter(files, {
     #     # Zan
     #     # "0073010J", # Susie 天使

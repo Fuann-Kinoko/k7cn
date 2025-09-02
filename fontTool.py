@@ -130,8 +130,8 @@ class FontKind(Enum):
     ALPHA   = auto()
     PUNCT   = auto()
 
-    def get_face_size(self, usage: JmkUsage) -> int:
-        scale = get_face_scale_factor(usage)
+    def get_face_size(self, usage: JmkUsage, extra_scale:float = 1.0) -> int:
+        scale = extra_scale * get_face_scale_factor(usage)
         if usage == JmkUsage.Voice and self != FontKind.NUM and self != FontKind.ALPHA:
             scale *= 1.2
         if usage == JmkUsage.Tutorial:
@@ -156,8 +156,8 @@ class FontKind(Enum):
             case _:
                 assert False, "unreachable"
 
-    def get_width(self, usage: JmkUsage, ch: str|None = None) -> int:
-        scale = get_width_scale_factor(usage)
+    def get_width(self, usage: JmkUsage, ch: str|None = None, extra_scale:float = 1.0) -> int:
+        scale = extra_scale * get_width_scale_factor(usage)
         match self:
             case FontKind.KANA:
                 return int(scale * KANA_WIDTH)
@@ -182,8 +182,8 @@ class FontKind(Enum):
             case _:
                 raise NotImplementedError
 
-    def get_height(self, usage: JmkUsage, alpha_ch: str|None = None) -> int:
-        scale = get_face_scale_factor(usage)
+    def get_height(self, usage: JmkUsage, ch: str|None = None, extra_scale: float = 1.0) -> int:
+        scale = extra_scale * get_face_scale_factor(usage)
         return int(scale * DEFAULT_HEIGHT)
 
 
@@ -273,7 +273,7 @@ def gen_char_image(char: str, usage: JmkUsage, info: stFontParam|None = None) ->
     if info is not None:
         img = Image(width=info.w*4, height=info.h*4, background=Color('transparent'))
     else:
-        img = Image(width=kind.get_width(usage, ch = char)*4, height=kind.get_height(usage, alpha_ch = char)*4, background=Color('transparent'))
+        img = Image(width=kind.get_width(usage, ch = char)*4, height=kind.get_height(usage, ch = char)*4, background=Color('transparent'))
 
     codepoint = f"{ord(char):04X}".upper()
     if usage == JmkUsage.Default and codepoint in SUSIE_CHARS:
@@ -405,7 +405,7 @@ def save_preview_jimaku(
             else:
                 char = ctl2char_lookup[ctl]
                 kind = check_kind(char, usage)
-                char_info = stFontParam(u=0,v=0,w=kind.get_width(usage, ch=char),h=kind.get_height(usage, alpha_ch=char))
+                char_info = stFontParam(u=0,v=0,w=kind.get_width(usage, ch=char),h=kind.get_height(usage, ch=char))
                 char_img = gen_char_image(char, usage, char_info)
 
                 codepoint = f"{ord(char):04x}".upper()
@@ -516,7 +516,7 @@ def genFParams(
     for char in unique_chars:
         kind = check_kind(char, usage)
         w = kind.get_width(usage, ch=char)
-        h = kind.get_height(usage, alpha_ch=char)
+        h = kind.get_height(usage, ch=char)
         step = w
         if original_alignment and kind in (FontKind.KANJI , FontKind.KATA , FontKind.NUM , FontKind.SPECIAL):
             step += 1

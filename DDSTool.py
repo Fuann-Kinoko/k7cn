@@ -185,7 +185,7 @@ def gen(
             But recommended to be False.
     """
     tmp_kind = fontTool.check_kind(unique_chars[0], usage)
-    HEIGHT = tmp_kind.get_height(usage, alpha_ch=unique_chars[0])
+    HEIGHT = tmp_kind.get_height(usage, ch=unique_chars[0])
     del tmp_kind
 
     canvas_width = max_width
@@ -201,7 +201,7 @@ def gen(
     for char in unique_chars:
         kind = fontTool.check_kind(char, usage)
         w = kind.get_width(usage, ch=char)
-        h = kind.get_height(usage, alpha_ch=char)
+        h = kind.get_height(usage, ch=char)
         assert(h == HEIGHT)
         step = w
         if original_alignment and kind in (fontTool.FontKind.KANJI , fontTool.FontKind.KATA , fontTool.FontKind.NUM , fontTool.FontKind.SPECIAL):

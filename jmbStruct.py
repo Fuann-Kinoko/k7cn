@@ -776,7 +776,6 @@ class texMeta:
 
         self.w = handler.unpack('H', fp.read(2))[0]
         self.h = handler.unpack('H', fp.read(2))[0]
-        print(f"{self.w=}, {self.h=}")
         assert fp.read(4)   == b'\x00'*4
         assert fp.read(4)   == (b'\x00\x00\x00@' if self.__big_endian else b'@\x00\x00\x00'), f"Assertion Failed. read {fp.read(4)}, expect: '@'/'0000'"
         assert fp.read(44)  == b'\x00' * 44
