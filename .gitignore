@@ -5,6 +5,10 @@
 !assets/**
 !ripScript/
 !ripScript/**
+!genOrders/
+!genOrders/**
+!genTextures/
+!genTextures/**
 !.gitignore
 
 !README.md
