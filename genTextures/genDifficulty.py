@@ -21,17 +21,21 @@ readonly_text01 = "D:\\SteamLibrary\\steamapps\\common\\killer7\\ReadOnly\\Textu
 readonly_text02 = "D:\\SteamLibrary\\steamapps\\common\\killer7\\ReadOnly\\Texture\\titleJ\\text_a_02.bin"
 readonly_text03 = "D:\\SteamLibrary\\steamapps\\common\\killer7\\ReadOnly\\Texture\\titleJ\\text_b_01.bin"
 readonly_text04 = "D:\\SteamLibrary\\steamapps\\common\\killer7\\ReadOnly\\Texture\\titleJ\\text_b_02.bin"
+readonly_text_d = "D:\\SteamLibrary\\steamapps\\common\\killer7\\ReadOnly\\Texture\\titleJ\\text_d.bin"
+readonly_text_e = "D:\\SteamLibrary\\steamapps\\common\\killer7\\ReadOnly\\Texture\\titleJ\\text_e.bin"
 extracted_text01 = "D:\\SteamLibrary\\steamapps\\common\\killer7\\Extracted\\Texture\\titleJ\\text_a_01.bin"
 extracted_text02 = "D:\\SteamLibrary\\steamapps\\common\\killer7\\Extracted\\Texture\\titleJ\\text_a_02.bin"
 extracted_text03 = "D:\\SteamLibrary\\steamapps\\common\\killer7\\Extracted\\Texture\\titleJ\\text_b_01.bin"
 extracted_text04 = "D:\\SteamLibrary\\steamapps\\common\\killer7\\Extracted\\Texture\\titleJ\\text_b_02.bin"
+extracted_text_d = "D:\\SteamLibrary\\steamapps\\common\\killer7\\Extracted\\Texture\\titleJ\\text_d.bin"
+extracted_text_e = "D:\\SteamLibrary\\steamapps\\common\\killer7\\Extracted\\Texture\\titleJ\\text_e.bin"
 extracted_dir = "D:\\SteamLibrary\\steamapps\\common\\killer7\\Extracted\\Texture\\titleJ"
 extracted_rsl = "D:\\SteamLibrary\\steamapps\\common\\killer7\\Extracted\\Texture\\titleJ.rsl"
 dest_rsl = "D:\\SteamLibrary\\steamapps\\common\\killer7\\Texture\\titleJ.pak"
 
 command = input("提取图片输入y;将修改后的图片封装回去输入n (y/n): ").lower().strip()
 if command == "y":
-    for readonly_text in [readonly_text01, readonly_text02, readonly_text03, readonly_text04]:
+    for readonly_text in [readonly_text01, readonly_text02, readonly_text03, readonly_text04, readonly_text_d, readonly_text_e]:
         target_noext = os.path.join("genTextures", "difficulty", os.path.basename(readonly_text)[:-4])
         with open(readonly_text, 'rb') as fp:
             is_stri = fp.read(4) == b'STRI'
@@ -49,7 +53,7 @@ if command == "y":
             bin_dds_img.save(filename=target_noext+".png")
             bin_dds_img.close()
 elif command == "n":
-    for extracted_text in [extracted_text01, extracted_text02, extracted_text03, extracted_text04]:
+    for extracted_text in [extracted_text01, extracted_text02, extracted_text03, extracted_text04, extracted_text_d, extracted_text_e]:
         mod_img_png = os.path.join("genTextures", "difficulty", os.path.basename(extracted_text)[:-4] + "_mod.png")
         mod_img_dds = os.path.basename(extracted_text)[:-4] + "_mod.dds"
         if not os.path.exists(mod_img_png):

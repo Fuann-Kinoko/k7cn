@@ -218,6 +218,8 @@ def gen_char_image(char: str, width, height) -> Image:
     final_img.close()
 
     img = Image(blob=img_blob)
+    if char == "丘": # DEBUG: 特殊处理
+        img.roll(y=3)
     img.gamma(1.27)
     img.modulate(brightness=150, saturation=100, hue=100)
     img.contrast_stretch(black_point=0.2, white_point=0.8)

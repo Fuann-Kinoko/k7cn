@@ -471,7 +471,6 @@ def main():
     files.extend(lister.flatten_list(lister.getStage(JmkKind.JA)))
     files.extend(lister.flatten_list(lister.getVoice(JmkKind.JA)))
     files.extend(lister.flatten_list(lister.getTutorial(JmkKind.JA)))
-    # NOTE: 我在人工做差分……
     # NOTE: 要做的事情：
     # 1. DONE: 把Susie的颜文字换成原版的，而不自己生成（就像引号一样）
     # 2. DONE: 把云男的手办序号（1 2 3那些，10 11 12反而不用换）换成原版的，而不自己生成（就像引号一样）
@@ -495,20 +494,22 @@ def main():
     # 14.DONE: 狮子美工
     # 15.DONE: 防止在Tutorial Panel中，殺这个字被放大
     # 16.DONE: 等全部生成完毕后，记得重新生成一下Zan的0072020J，把那家伙替换成他
-    # 17.TODO: 切换地图/装弹时的noiseFont，现在算是生成出来了但没有通篇确认英文有没有乱码
+    # 17.DONE: 切换地图/装弹时的noiseFont，现在算是生成出来了但没有通篇确认英文有没有乱码
     # 18.DONE: 地图文字生成
     # 19.DONE: 替换SpMenu的日语字，变成中文字
-    # 20.TODO: 把群里反馈的所有内容更新
+    # 20.DONE: 把群里反馈的所有内容更新
+    # 21.TODO: 狮子最后那句welcome，真的不改么？
     files = lister.filter(files, {
+        # CharaGeki
+        "05100103J",
+        "05100105J",
         # Zan
-        "0072042J",
-        "0073062J",
-        "0073070J",
-        "0110200J",
-        "0511240J",
-        "0901190J",
+        "0073050J",
+        "0075050J",
+        "0110510J",
+        "0300301J",
         # Hato
-        "hato010001J"
+        "hato035001J",
         # "0073010J", # Susie 天使
         # "0073011J",
         # "0100070J", # Susie 日落上
@@ -598,7 +599,7 @@ def main():
     # All avaliable tasks:
     # tasks = [
     #     TaskPrintMetaData,
-    #     # TaskPrintRegisteredChars, # Only Avaliable if there's raw text provided (e.g. `assets/raw_text/00010101J.json`)
+    #     TaskPrintRegisteredChars, # Only Avaliable if there's raw text provided (e.g. `assets/raw_text/00010101J.json`)
     #     TaskPrintFParams,
     #     TaskPrintDDSInfo,
 
@@ -609,17 +610,17 @@ def main():
 
     #     TaskTranslation,            # trying to find `assets/translation/{jmb_name}.json` as default
 
-    #     # TaskWrapper(TaskUpdateTex, import_from_file = True, dds_path = 'gen.dds'),    # Update by external DDS
-    #     TaskWrapper(TaskUpdateTex, import_from_file = False),                           # Update by registered chars (translation / raw text)
+    #     TaskWrapper(TaskUpdateTex, import_from_file = True, dds_path = 'gen.dds'),      # Update by importing external DDS
+    #     TaskWrapper(TaskUpdateTex, import_from_file = False),                           # Update based on registered chars (translation / raw text)
 
     #     TaskWrapper(TaskDumpDDSTex, dump_path="DDS_mod.dds"),
     #     TaskWrapper(TaskExtractChars, extracted_dir="modded_dds_font"),
 
-    #     TaskWrapper(TaskGeneratePreview, seperate_by_jmbname=False, preview_dir="jmks"),                                   # Generate Previews using registered chars
-    #     # TaskWrapper(TaskGeneratePreview, preview_dir="jmks", extracted_chars_dir = "dds_font"), # Generate Previews using external dir
+    #     TaskWrapper(TaskGeneratePreview, seperate_by_jmbname=False, preview_dir="jmks"),          # Generate Previews using registered chars
+    #     TaskWrapper(TaskGeneratePreview, preview_dir="jmks", extracted_chars_dir = "dds_font"),   # Generate Previews by providing external dir
 
-    #     TaskSave,                   # write to `JMBS/{jmb_file}` as default
-    #     # TaskWrapper(TaskSave, output_path="testmod.jmb"),
+    #     TaskSave,                                             # write to `JMBS/{jmb_file}` as default
+    #     TaskWrapper(TaskSave, output_path="testmod.jmb"),
     # ]
 
 if __name__ == '__main__':

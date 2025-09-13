@@ -91,7 +91,7 @@ class FileLister:
         self._CharaGeki_06_Lion_JA = [
             "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/05100103/05100103/05100103J.jmb", # NOTE: MATSUOKA
             "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/05120101/05120101/05120101J.jmb", # NOTE: SHANGHAI
-            # "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/05100105/05100105/05100105J.jmb", # NOTE: MATSUOKA LIVE 只有一句welcome
+            "D:/SteamLibrary/steamapps/common/killer7/ReadOnly/CharaGeki/05100105/05100105/05100105J.jmb", # NOTE: MATSUOKA LIVE 只有一句welcome
         ]
 
         self._Zan_00_Angel_JA = [
