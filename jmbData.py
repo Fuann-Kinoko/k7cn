@@ -93,7 +93,7 @@ class BaseGdat(ABC):
         pass
 
 class gDat_US(BaseGdat):
-    def __init__(self, fp = None):
+    def __init__(self, fp = None, bigEndian = False):
         self.meta : MetaData_US
         self.sentences : list[stJimaku_US]
         self.fParams : list[stFontParam]
@@ -101,7 +101,7 @@ class gDat_US(BaseGdat):
 
         super().__init__(fp)
 
-    def read(self, fp):
+    def read(self, fp, bigEndian = False):
         self.meta = MetaData_US(fp)
 
         fp.seek(self.meta.sentence_offset)
