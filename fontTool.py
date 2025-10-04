@@ -401,7 +401,7 @@ def save_preview_jimaku(
                     char_img = gen_char_image("@", usage)
                     step = 40
                 else:
-                    assert False, "Fix that error"
+                    assert False, f"ctl = {ctl}, \tctl_s16 = {ctl_s16}, \tctl not in ctl2char_lookup"
             else:
                 char = ctl2char_lookup[ctl]
                 kind = check_kind(char, usage)

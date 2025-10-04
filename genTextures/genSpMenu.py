@@ -56,6 +56,7 @@ readonly_memo_0    = "D:\\SteamLibrary\\steamapps\\common\\killer7\\ReadOnly\\su
 readonly_memo_1    = "D:\\SteamLibrary\\steamapps\\common\\killer7\\ReadOnly\\sub\\SpecialJ\\4x_moji_moJ.BIN"
 readonly_hato_0    = "D:\\SteamLibrary\\steamapps\\common\\killer7\\ReadOnly\\sub\\SpecialJ\\4x_moji_haJ.BIN"
 readonly_hato_1    = "D:\\SteamLibrary\\steamapps\\common\\killer7\\ReadOnly\\sub\\SpecialJ\\4x_moji_toJ.BIN"
+readonly_sore      = "D:\\SteamLibrary\\steamapps\\common\\killer7\\ReadOnly\\sub\\SpecialJ\\mojiJ.BIN"
 
 extracted_item_0    = "D:\\SteamLibrary\\steamapps\\common\\killer7\\Extracted\\sub\\SpecialJ\\4x_moji_aJ.BIN"
 extracted_item_1    = "D:\\SteamLibrary\\steamapps\\common\\killer7\\Extracted\\sub\\SpecialJ\\4x_moji_iJ.BIN"
@@ -65,6 +66,7 @@ extracted_memo_0    = "D:\\SteamLibrary\\steamapps\\common\\killer7\\Extracted\\
 extracted_memo_1    = "D:\\SteamLibrary\\steamapps\\common\\killer7\\Extracted\\sub\\SpecialJ\\4x_moji_moJ.BIN"
 extracted_hato_0    = "D:\\SteamLibrary\\steamapps\\common\\killer7\\Extracted\\sub\\SpecialJ\\4x_moji_haJ.BIN"
 extracted_hato_1    = "D:\\SteamLibrary\\steamapps\\common\\killer7\\Extracted\\sub\\SpecialJ\\4x_moji_toJ.BIN"
+extracted_sore      = "D:\\SteamLibrary\\steamapps\\common\\killer7\\Extracted\\sub\\SpecialJ\\mojiJ.BIN"
 extracted_dir = "D:\\SteamLibrary\\steamapps\\common\\killer7\\Extracted\\sub\\SpecialJ"
 extracted_rsl = "D:\\SteamLibrary\\steamapps\\common\\killer7\\Extracted\\sub\\SpecialJ.rsl"
 dest_pak = "D:\\SteamLibrary\\steamapps\\common\\killer7\\sub\\SpecialJ.pak"
@@ -72,7 +74,8 @@ dest_pak = "D:\\SteamLibrary\\steamapps\\common\\killer7\\sub\\SpecialJ.pak"
 command = input("提取图片输入y;将修改后的图片封装回去输入n (y/n): ").lower().strip()
 if command == "y":
     for r_tex in [  readonly_item_0, readonly_item_1, readonly_item_2, readonly_item_3,
-                    readonly_memo_0, readonly_memo_1, readonly_hato_0, readonly_hato_1]:
+                    readonly_memo_0, readonly_memo_1, readonly_hato_0, readonly_hato_1,
+                    readonly_sore]:
         target_noext = os.path.join("genTextures", "spMenu", os.path.basename(r_tex)[:-4])
         with open(r_tex, 'rb') as fp:
             is_stri = fp.read(4) == b'STRI'
@@ -133,6 +136,49 @@ elif command == "n":
         bin_dds_img.close()
         bin_header.w = width // 4
         bin_header.h = height // 4
+        bin_header.dds_size = len(dds_bytes)
+        print("bin updated header =", bin_header)
+
+        bin.header = bin_header
+        with open(e_tex, 'wb') as bfp:
+            bin.write(bfp)
+
+    for e_tex in [extracted_sore]:
+        mod_img_png = os.path.join("genTextures", "spMenu", os.path.basename(e_tex)[:-4] + "_mod.png")
+        mod_img_dds = os.path.basename(e_tex)[:-4] + "_mod.dds"
+        if not os.path.exists(mod_img_png):
+            print(f"图片{mod_img_png}不存在，跳过")
+            continue
+
+        print(f"处理{os.path.basename(e_tex)[:-4]}")
+        command = [
+            "texconv.exe",
+            "-f", "B8G8R8A8_UNORM",  # 压缩格式 = 无
+            "-ft", "dds",            # 输出文件类型
+            "-srgb",                 # 输入为 sRGB，输出也为 sRGB
+            "-m", "1",               # 禁用 mipmap
+            "-y",                    # 覆盖输出文件（不提示）
+            mod_img_png,             # 输入文件
+        ]
+        subprocess.run(command, check=True)
+        print(f"\n成功重建DDS贴图: {mod_img_dds}")
+        print(f"压缩格式: None (None)")
+
+        bin = stTex()
+        fp = open(mod_img_dds, 'rb')
+        dds_bytes = fp.read()
+        fp.close()
+        os.remove(mod_img_dds)
+        bin.dds = dds_bytes
+
+        bin_header = texMeta()
+        bin_header.magic = b'\x00'*4
+        bin_header.encoding = b'\x06\x00\x00\x00'
+        bin_dds_img = Image(filename=mod_img_png)
+        width, height = bin_dds_img.size
+        bin_dds_img.close()
+        bin_header.w = width
+        bin_header.h = height
         bin_header.dds_size = len(dds_bytes)
         print("bin updated header =", bin_header)
 

@@ -204,12 +204,6 @@ def gen_char_image(char: str, width, height) -> Image:
                     ]
                     final_draw.ellipse(bbox, fill=(255, 255, 255))
 
-    # 保存图像
-    # DEBUG: 保存一张就走人
-    # if char == "曼":
-    #     final_img.save(os.path.join("genTextures", "noiseFont", "test.png"))
-    #     final_img.close()
-    #     exit(1)
     img_buffer = io.BytesIO()
     final_img = final_img.resize((width, height), PILImage.Resampling.LANCZOS)
     final_img.save(img_buffer, format='PNG')
