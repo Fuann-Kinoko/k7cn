@@ -241,14 +241,75 @@ def run(map_data):
     # json_ori_path = os.path.join(current_dir, map_name + "_ori.json")
     # gen_ori(map_name, strimage, json_ori_path)
 
-    # 读入 trans.json 修改strimage 打包并返回
-    json_trans_path = os.path.join(current_dir, map_name + "_trans.json")
-    updated_strimage = update(map_name, strimage, json_trans_path)
-    extracted_path = map_data["extracted_sti"]
-    with open(extracted_path, "wb") as fp:
-        updated_strimage.write(fp)
-    print(f"{current_dir}: 导出{map_name}的sti")
-    print_info(updated_strimage)
+    # 提取 ori_nametex
+    # ori_nametex = map_data["readonly_mapname"]
+    # with open(ori_nametex, 'rb') as fp:
+    #     is_stri = fp.read(4) == b'STRI'
+    #     assert (not is_stri)
+    #     fp.seek(0)
+    #     tex = stTex(fp)
+    #     print("tex header =", tex.header)
+    #     DDSTool.print_info(tex.dds)
+    #     target_noext = os.path.join(current_dir, os.path.basename(ori_nametex)[:-4])
+    #     tex.dump(target_noext+".dds")
+    #     bin_dds_img = Image(blob=tex.dds)
+    #     bin_dds_img.format = 'png'
+    #     bin_dds_img.save(filename=target_noext+".png")
+    #     bin_dds_img.close()
+
+    # # 读入 trans.json 修改strimage 打包并返回
+    # json_trans_path = os.path.join(current_dir, map_name + "_trans.json")
+    # updated_strimage = update(map_name, strimage, json_trans_path)
+    # extracted_path = map_data["extracted_sti"]
+    # with open(extracted_path, "wb") as fp:
+    #     updated_strimage.write(fp)
+    # print(f"{current_dir}: 导出{map_name}的sti")
+    # print_info(updated_strimage)
+
+    # 重新打包图片
+    for e_nametex in [map_data["extracted_mapname"]]:
+        mod_img_png = os.path.join(current_dir, os.path.basename(e_nametex)[:-4] + "_mod.png")
+        mod_img_dds = os.path.basename(e_nametex)[:-4] + "_mod.dds"
+        if not os.path.exists(mod_img_png):
+            print(f"图片{mod_img_png}不存在，跳过")
+            raise FileNotFoundError
+        print(f"处理{os.path.basename(e_nametex)[:-4]}")
+        command = [
+            "texconv.exe",
+            "-f", "B8G8R8A8_UNORM",  # 压缩格式 = 无
+            "-ft", "dds",            # 输出文件类型
+            "-srgb",                 # 输入为 sRGB，输出也为 sRGB
+            "-m", "1",               # 禁用 mipmap
+            "-y",                    # 覆盖输出文件（不提示）
+            mod_img_png,             # 输入文件
+        ]
+        subprocess.run(command, check=True)
+        print(f"\n成功重建DDS贴图: {mod_img_dds}")
+        print(f"压缩格式: None (None)")
+
+        bin = stTex()
+        fp = open(mod_img_dds, 'rb')
+        dds_bytes = fp.read()
+        fp.close()
+        os.remove(mod_img_dds)
+        bin.dds = dds_bytes
+
+        bin_header = texMeta()
+        bin_header.magic = b'\x00'*4
+        bin_header.encoding = b'\x06\x00\x00\x00'
+        bin_dds_img = Image(filename=mod_img_png)
+        width, height = bin_dds_img.size
+        bin_dds_img.close()
+        bin_header.w = width
+        bin_header.h = height
+        bin_header.dds_size = len(dds_bytes)
+        print("bin updated header =", bin_header)
+
+        bin.header = bin_header
+        with open(e_nametex, 'wb') as bfp:
+            bin.write(bfp)
+
+    # 最终repack
     extracted_dir = map_data["extracted_dir"]
     extracted_rsl = map_data["extracted_rsl"]
     dest_pak = map_data["dest_pak"]
