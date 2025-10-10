@@ -1,0 +1,3 @@
+[submodule "jmbTool"]
+	path = jmbTool
+	url = https://github.com/Fuann-Kinoko/jmbTool.git

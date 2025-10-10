@@ -9,6 +9,7 @@
 !genOrders/**
 !genTextures/
 !genTextures/**
+!jmbTool/
 !.gitignore
 
 !README.md
