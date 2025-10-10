@@ -3,7 +3,7 @@ import os
 import shutil
 import subprocess
 from typing import Dict
-from jmbStruct import stFontParam, SIChr, texStrImage, stTex, texMeta
+from jmbTool.jmbStruct import stFontParam, SIChr, texStrImage, stTex, texMeta
 
 from wand.image import Image
 from wand.color import Color

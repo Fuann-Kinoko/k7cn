@@ -11,8 +11,8 @@ sys.path.append(str(work_dir_path.resolve()))
 
 import DDSTool
 import fontTool
-from jmbStruct import MetaData_JA, stOneSentence, stFontParam, stTex, texStrImage, texMeta, SIChr
-from jmbData import gDat_JA
+from jmbTool.jmbStruct import MetaData_JA, stOneSentence, stFontParam, stTex, texStrImage, texMeta, SIChr
+from jmbTool.jmbData import gDat_JA
 
 from wand.image import Image
 from wand.color import Color

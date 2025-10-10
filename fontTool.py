@@ -1,10 +1,10 @@
 from enum import Enum, auto
 import os
 from typing import cast
-from jmbConst import JmkUsage
-from jmbStruct import stFontParam, stJimaku
-from jmbNumeric import S16_BE
-import jmbUtils
+from jmbTool.jmbConst import JmkUsage
+from jmbTool.jmbStruct import stFontParam, stJimaku
+from jmbTool.jmbNumeric import S16_BE
+import jmbTool.jmbUtils as jmbUtils
 
 from wand.image import Image
 from wand.color import Color
@@ -277,7 +277,7 @@ def gen_char_image(char: str, usage: JmkUsage, info: stFontParam|None = None) ->
 
     codepoint = f"{ord(char):04X}".upper()
     if usage == JmkUsage.Default and codepoint in SUSIE_CHARS:
-        print(f"+++Using susie for {char} : {codepoint}")
+        # print(f"+++Using susie for {char} : {codepoint}")
         img = Image(filename=f"assets/chars/Susie/{codepoint}.png")
         return img
 
@@ -411,7 +411,7 @@ def save_preview_jimaku(
                 codepoint = f"{ord(char):04x}".upper()
                 if usage == JmkUsage.Default and codepoint in SUSIE_CHARS:
                     step = (char_img.width // 4) + 1
-                    print(f"+++ Susie字符[{char}]的特殊宽度：{step}")
+                    # print(f"+++ Susie字符[{char}]的特殊宽度：{step}")
                 else:
                     step = kind.get_width(usage, ch=char)
 

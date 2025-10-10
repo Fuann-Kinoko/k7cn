@@ -2,10 +2,10 @@ from typing import Any, Callable, Self, Type, TypeVar, cast
 import k7FileList
 import fontTool
 import DDSTool
-import jmbUtils
-import jmbConst
-from jmbConst import JmkKind
-from jmbData import _TYPE_is_US,_TYPE_is_JA, BaseGdat, gDat, gDat_JA, gDat_US
+import jmbTool.jmbUtils
+from jmbTool.jmbConst import JmkKind, JmkUsage
+from jmbTool.jmbData import BaseGdat, gDat, gDat_JA, gDat_US
+from jmbTool.typeUtils import _TYPE_is_US, _TYPE_is_JA
 
 import argparse
 import json
@@ -139,7 +139,7 @@ def TaskGeneratePreview(self:JMBBaseTask):
             Default: ""
     """
     extracted_chars_dir = self.params.get('extracted_chars_dir', "")
-    depends_on_dds_extraction : bool = (extracted_chars_dir != "")
+    use_extracted_chars : bool = (extracted_chars_dir != "")
     seperate_by_jmbname : bool = self.params.get('seperate_by_jmbname', False)
     preview_dir = self.params.get('preview_dir', 'jmks')
     if seperate_by_jmbname:
@@ -147,7 +147,7 @@ def TaskGeneratePreview(self:JMBBaseTask):
         preview_dir += f"/{jmb_name}"
     ctl2char_lookup = self.context.get('ctl2char_lookup', None)
     usage = self.context.get('jmb_usage', 0)
-    if not depends_on_dds_extraction:
+    if not use_extracted_chars:
         check_raw_text_prepared(self.context)
     print(f"\n==== Generating Previews ({usage}) ====")
 
@@ -164,7 +164,7 @@ def TaskGeneratePreview(self:JMBBaseTask):
                 # print("\t rubi_data:", len(jmk.rubi_data), jmk.rubi_data)
                 target_path = f"{preview_dir}/JA_sent{i}/{jmk_idx:02d}"
                 # jmk.dump(target_path)
-                if depends_on_dds_extraction:
+                if use_extracted_chars:
                     fontTool.save_preview_jimaku(target_path+".png", jmk, usage, fParams=self.jmb.fParams, provided_chars_dir=extracted_chars_dir)
                 else:
                     fontTool.save_preview_jimaku(target_path+".png", jmk, usage, ctl2char_lookup, original_alignment=False)
@@ -174,7 +174,7 @@ def TaskGeneratePreview(self:JMBBaseTask):
             if not sent.valid():
                 break
             target_path = f"{preview_dir}/US_sent{i}"
-            if depends_on_dds_extraction:
+            if use_extracted_chars:
                 fontTool.save_preview_jimaku(target_path+".png", sent, usage, fParams=self.jmb.fParams, provided_chars_dir=extracted_chars_dir)
             else:
                 fontTool.save_preview_jimaku(target_path+".png", sent, usage, ctl2char_lookup, original_alignment=False)
@@ -249,18 +249,6 @@ def TaskPrintRegisteredChars(self:JMBBaseTask):
     print("+char2ctl:", char2ctl_lookup)
 
 @basicTask
-def TaskFlushFParams(self:JMBBaseTask):
-    """
-    Flush font parameters.
-
-    Parameters:
-        None
-    """
-    print("\n==== Flushing FParams ====")
-    self.jmb.flush_fparams()
-    print("Finished.")
-
-@basicTask
 def TaskPrintFParams(self:JMBBaseTask):
     """
     Prints font parameters.
@@ -327,8 +315,8 @@ def TaskTranslation(self:JMBBaseTask):
     f.close()
     print("\n==== Modifying Translation ====")
 
-    translation = jmbUtils.translation_correction(translation, usage)
-    jmbUtils.print_jmt_differences(self.context.get('provided_text'), translation)
+    translation = jmbTool.jmbUtils.translation_correction(translation, usage)
+    jmbTool.jmbUtils.print_jmt_differences(self.context.get('provided_text'), translation)
 
     text_flatten = ''.join(t for s in translation for t in s)
     ctl2char_lookup, char2ctl_lookup, unique_chars = fontTool.register(text_flatten)
@@ -373,19 +361,19 @@ def run_tasks(input_path:str, tasks:list[type], **task_args):
     task_args['jmb_file'] = jmb_file
     task_args['jmb_name'] = jmb_name
 
-    usage = jmbConst.JmkUsage.Default
+    usage = JmkUsage.Default
     if 'nm' in jmb_name or 'NM' in jmb_name:
-        assert usage == jmbConst.JmkUsage.Default
-        usage = jmbConst.JmkUsage.Name
+        assert usage == JmkUsage.Default
+        usage = JmkUsage.Name
     if 'hato' in jmb_name:
-        assert usage == jmbConst.JmkUsage.Default
-        usage = jmbConst.JmkUsage.Hato
+        assert usage == JmkUsage.Default
+        usage = JmkUsage.Hato
     if 'tutorial' in jmb_name:
-        assert usage == jmbConst.JmkUsage.Default
-        usage = jmbConst.JmkUsage.Tutorial
+        assert usage == JmkUsage.Default
+        usage = JmkUsage.Tutorial
     if 'voice' in jmb_name:
-        assert usage == jmbConst.JmkUsage.Default
-        usage = jmbConst.JmkUsage.Voice
+        assert usage == JmkUsage.Default
+        usage = JmkUsage.Voice
     task_args['jmb_usage'] = usage
 
     if 'Zan' in input_path:
@@ -462,6 +450,7 @@ def main():
     # files = lister.getHato(JmkKind.JA)[1]
     # files = lister.getVoice(JmkKind.JA)
     # files = lister.getHato(JmkKind.JA)
+    # files = lister.getCharaGeki(JmkKind.US)[0]     # 全部章节
 
     files = lister.flatten_list(files)
     files.extend(lister.flatten_list(lister.getZan(JmkKind.JA)))
@@ -482,7 +471,7 @@ def main():
     # 7. DONE: tutorial_logJ.jmt内容感觉还要改不少？
     # 8. DONE: tutorial_logJ.jmt里面数字与汉字不在一个水平线上
     # 9. DONE: 每章开头order的汉字STRIMAGE
-    # 10.TODO: 每章开头裂纹打字机的汉字美工
+    # 10.DONE: 每章开头裂纹打字机的汉字美工
     # 11.DONE: 教程美工 + 系统美工
     #           DONE: 开头语言选择
     #           DONE: 开头guro提醒
@@ -498,18 +487,54 @@ def main():
     # 18.DONE: 地图文字生成
     # 19.DONE: 替换SpMenu的日语字，变成中文字
     # 20.DONE: 把群里反馈的所有内容更新
-    # 21.TODO: 狮子最后那句welcome，真的不改么？
+    # 21.DONE: 狮子最后那句welcome，真的不改么？
     files = lister.filter(files, {
-        # CharaGeki
-        "05100103J",
-        "05100105J",
-        # Zan
-        "0073050J",
-        "0075050J",
-        "0110510J",
-        "0300301J",
-        # Hato
-        "hato035001J",
+        # # CharaGeki
+        # "01090101J",
+        # "02010101J",
+        # "03050107J",
+        # "03060102J",
+        # "05030101J",
+        # "05080202J",
+        # # Movie
+        # "04050202",
+        # # Zan
+        # "0071030J",
+        # "0073010J",
+        # "0074030J",
+        # "0100050J",
+        # "0110300J",
+        # "0110310J",
+        # "0112030J",
+        # "0121500J",
+        # "0201020J",
+        # "0300130J",
+        # "0300400J",
+        # "0350020J",
+        # "0350040J",
+        # "0350050J",
+        # "0350080J",
+        # "0350090J",
+        # "0350140J",
+        # "0350141J",
+        # "0401520J",
+        # "0404010J",
+        # "0511220J",
+        "0511250J",
+        # "0511260J",
+        # "0511310J",
+        # "0555000J",
+        # "0555010J",
+        # "0555030J",
+        # "0555050J",
+        # "0555120J",
+        # # hato
+        # "hato007301J",
+        # "hato010001J",
+        # "hato010002J",
+        # "hato010003J",
+        # "hato020105J",
+        # "hato035001J",
         # "0073010J", # Susie 天使
         # "0073011J",
         # "0100070J", # Susie 日落上
@@ -522,12 +547,6 @@ def main():
         # "0300301J",
         # "0350140J", # Susie 邂逅下
         # "0350141J",
-        # # Panel
-        # "P020202J", # 会长编号
-        # "P020203J",
-        # # Stage
-        # "Stage209_M00J", # 会长编号
-        # "Stage209_M01J",
     }) # NOTE: 更新翻译中
     # files = lister.filter(files, {"010001J", "010002J"})
     # files = lister.filter(files, {"0121000J", "0121020J", "0121110J"})
@@ -537,9 +556,9 @@ def main():
     # files = lister.filter(files, {"voice01J"})
     # files = lister.filter(files, {"0072020J"})
     # files = lister.filter(files, {"tutorial_logJ", "Stage_tutorialJ"})
+    # files = lister.filter(files, {"Stage_tutorialJ"})
 
     files.sort()
-    # files = next((files[i:] for i, s in enumerate(files) if "05120101J" in s), [])
     pprint(files, indent=2, width=80, depth=None, compact=True)
     print("len:", len(files))
 
@@ -571,15 +590,16 @@ def main():
 
     custom = [
         TaskValidation,
-        # TaskPrintFParams,
+        TaskPrintFParams,
         # TaskFixMovieOffset,
-        # TaskFlushFParams,
         # TaskTranslation,
+        TaskWrapper(TaskDumpDDSTex, dump_path="DDS_ori.dds"),
+        TaskWrapper(TaskExtractChars, extracted_dir="dds_font"),
+        TaskWrapper(TaskGeneratePreview, extracted_chars_dir = "dds_font", seperate_by_jmbname=True, preview_dir="jmks"),
         # TaskWrapper(TaskGeneratePreview, seperate_by_jmbname=True, preview_dir="jmks"),
         # TaskWrapper(TaskUpdateTex, import_from_file = False),
         # TaskWrapper(TaskDumpDDSTex, dump_path="DDS_mod.dds"),
         # TaskWrapper(TaskExtractChars, extracted_dir="modded_dds_font"),
-        # TaskWrapper(TaskGeneratePreview, preview_dir="jmks"),
         # TaskSave,
     ]
 

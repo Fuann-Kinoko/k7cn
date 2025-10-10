@@ -1,6 +1,6 @@
 import itertools
 from typing import TypeGuard, Union, cast, overload
-from jmbConst import JmkKind
+from jmbTool.jmbConst import JmkKind
 
 def _TYPE_is_list_of_str(obj: Union[list[list[str]], list[str]]) -> TypeGuard[list[str]]:
     return len(obj) > 0 and isinstance(obj[0], str) and isinstance(obj, list)

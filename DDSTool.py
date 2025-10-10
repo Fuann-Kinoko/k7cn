@@ -2,8 +2,8 @@ import os
 import shutil
 import subprocess
 import fontTool
-import jmbConst
-from jmbStruct import stFontParam
+import jmbTool.jmbConst as jmbConst
+from jmbTool.jmbStruct import stFontParam
 from wand.image import Image
 from wand.display import display
 from wand.color import Color
@@ -212,7 +212,7 @@ def gen(
         if usage == jmbConst.JmkUsage.Default and codepoint in fontTool.SUSIE_CHARS:
             w = char_img.width // 4
             step = w + 1
-            print(f"+++ Susie字符 {char}:{codepoint} 使用特殊宽度：{w}；平常都是:{kind.get_width(usage, ch=char)}")
+            # print(f"+++ Susie字符 {char}:{codepoint} 使用特殊宽度：{w}；平常都是:{kind.get_width(usage, ch=char)}")
 
         if current_x + step*4 >= max_width:
             row_count += 1

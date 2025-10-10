@@ -7,7 +7,7 @@ current_dir = Path(__file__).parent
 work_dir_path = current_dir / ".."
 sys.path.append(str(work_dir_path.resolve()))
 
-from jmbStruct import stFontParam, SIChr, texStrImage, stTex, texMeta
+from jmbTool.jmbStruct import stFontParam, SIChr, texStrImage, stTex, texMeta
 
 from wand.image import Image
 from wand.color import Color
